@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ผู้ใช้ที่มีเอกสาร members/<อีเมลตัวพิมพ์เล็ก> เท่านั้นที่อ่านและเขียนข้อมูลฟาร์มได้
+    function memberPath() {
+      return /databases/$(database)/documents/members/$(request.auth.token.email.lower());
+    }
+    function isMember() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && exists(memberPath());
+    }
+    // ผู้ดูแลระบบ = สมาชิกที่มี field role เป็น "admin"
+    function isAdmin() {
+      return isMember() && get(memberPath()).data.role == 'admin';
+    }
+    match /members/{email} {
+      allow read: if request.auth != null
+        && (request.auth.token.email.lower() == email || isAdmin());
+      // ผู้ดูแลเพิ่ม แก้บทบาท หรือถอนสิทธิ์ได้จากในแอป แต่แก้หรือลบสิทธิ์ของตัวเองไม่ได้
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin() && request.auth.token.email.lower() != email;
+    }
+    match /{coll}/{docId} {
+      allow read, write: if coll != 'members' && isMember();
+    }
+  }
+}
