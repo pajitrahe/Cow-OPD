@@ -13,23 +13,25 @@ service cloud.firestore {
     function role() { return get(memberPath()).data.role; }
     // ผู้ดูแลระบบ = role "admin"
     function isAdmin() { return isMember() && role() == 'admin'; }
-    // ผู้ดูแลหรือสัตวแพทย์ = นำเข้ารายชื่อโค ผลเพาะเชื้อ แก้ฐานข้อมูลยา การตั้งค่า และกู้คืนข้อมูล
-    function isEditor() { return isMember() && (role() == 'admin' || role() == 'vet'); }
     match /members/{email} {
       allow read: if request.auth != null
         && (request.auth.token.email.lower() == email || isAdmin());
       allow create: if isAdmin();
       allow update, delete: if isAdmin() && request.auth.token.email.lower() != email;
+      // ทุกคนแก้ "ชื่อ" ของตัวเองได้ (แก้บทบาทตัวเองไม่ได้)
+      allow update: if request.auth != null && request.auth.token.email.lower() == email
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']);
     }
-    // รายชื่อโค ผลเพาะเชื้อจากไฟล์ และข้อมูลตั้งค่า (meta: ฐานข้อมูลยา การตั้งค่า ข้อมูลไฟล์ที่นำเข้า)
-    match /herd/{docId}     { allow read: if isMember(); allow write: if isEditor(); }
-    match /cultures/{docId} { allow read: if isMember(); allow write: if isEditor(); }
-    match /meta/{docId}     { allow read: if isMember(); allow write: if isEditor(); }
+    // รายชื่อโค ผลเพาะเชื้อจากไฟล์ ผล SCC และข้อมูลตั้งค่า (meta: ฐานข้อมูลยา การตั้งค่า ข้อมูลไฟล์ที่นำเข้า)
+    match /herd/{docId}     { allow read: if isMember(); allow write: if isMember(); }
+    match /cultures/{docId} { allow read: if isMember(); allow write: if isMember(); }
+    match /scc/{docId}      { allow read: if isMember(); allow write: if isMember(); }
+    match /meta/{docId}     { allow read: if isMember(); allow write: if isMember(); }
     // ประวัติการแก้ไข: เพิ่มได้ แต่แก้หรือลบไม่ได้
     match /audit/{docId}    { allow read: if isMember(); allow create: if isMember(); allow update, delete: if false; }
     // ข้อมูลอื่น (เคส ผลเพาะเชื้อที่ลงเอง ความเสี่ยง ถังขยะ บันทึกสรุป): สมาชิกทุกคน
     match /{coll}/{docId} {
-      allow read, write: if !(coll in ['members','herd','cultures','meta','audit']) && isMember();
+      allow read, write: if !(coll in ['members','herd','cultures','scc','meta','audit']) && isMember();
     }
   }
 }

@@ -250,14 +250,14 @@ details.fs{border:1px solid var(--line);border-radius:var(--r);padding:10px 14px
   <h1>Mastitis Herd Analytics <button type="button" id="verBadge" class="verb" aria-haspopup="true" aria-expanded="false">เวอร์ชัน</button><small>ระบบสรุปข้อมูลโคเต้านมอักเสบ · One Stop Dairy Farm</small></h1>
   <div style="display:grid;gap:4px;justify-items:end"><div class="userbox" id="userBox"></div><div class="sync" id="sync"><span>กำลังเชื่อมต่อฐานข้อมูล…</span></div></div>
 </div></header>
-<div class="wrap" id="verPanel" hidden></div>
+<div class="wrap" id="verPanel" hidden></div><div class="wrap" id="mePanel" hidden></div>
 <nav class="tabs" aria-label="โมดูล"><div class="wrap" id="tabs">
   <a href="#quick"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="tl">บันทึกด่วน</span><span class="ts">บันทึกด่วน</span></a>
   <a href="#cases"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1 2h3v14H5V6h3z"/><path d="M9 12h6M12 9v6"/></svg><span class="tl">บันทึกโคป่วย</span><span class="ts">โคป่วย</span></a>
   <a href="#daily"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg><span class="tl">ส่งรายงานประจำวัน</span><span class="ts">รายงานวัน</span></a>
   <a href="#risk"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h0"/></svg><span class="tl">ประเมินความเสี่ยงระดับฝูง</span><span class="ts">ความเสี่ยง</span></a>
   <a href="#summary"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg><span class="tl">รายงานฝูง</span><span class="ts">รายงานฝูง</span></a>
-  <a href="#herd"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg><span class="tl">ฐานข้อมูลโค เพาะเชื้อ &amp; ยา</span><span class="ts">ฐานข้อมูล</span></a>
+  <a href="#herd"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg><span class="tl">ฐานข้อมูลโค</span><span class="ts">ฐานข้อมูล</span></a>
   <a href="#users" id="usersTab" hidden><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 11a3 3 0 1 0 0-6M18 14.8c1.9.6 3.2 2.3 3.5 5.2"/></svg><span class="tl">ผู้ใช้</span><span class="ts">ผู้ใช้</span></a>
 </div></nav>
 <div class="wrap alerts" id="alerts" aria-live="polite"></div>
@@ -319,8 +319,8 @@ const HERD_KEY=['Cow Number','Lactation Number','Last Calving Date','Last Breedi
 const KIND_TH={contagious:'ติดต่อ (contagious)',both:'ติดต่อ/สิ่งแวดล้อม',env:'สิ่งแวดล้อม (environmental)',minor:'เชื้อรอง (minor)',none:'เพาะไม่ขึ้น',contam:'ปนเปื้อน',other:'อื่น ๆ'};
 
 /* ============ state ============ */
-const S={drugs:[],culx:{},settings:{recurDays:14},herdCols:[],herdChunks:{},herd:[],herdMeta:null,culChunks:{},cultures:[],culMeta:null,cases:{},risk:{},note:null,
-  ready:{herd:false,cul:false,cases:false,risk:false},db:null,dl:null,live:false};
+const S={drugs:[],culx:{},scc:{},sccMeta:null,settings:{recurDays:14},herdCols:[],herdChunks:{},herd:[],herdMeta:null,culChunks:{},cultures:[],culMeta:null,cases:{},risk:{},note:null,
+  ready:{herd:false,cul:false,scc:false,cases:false,risk:false},db:null,dl:null,live:false};
 const UI={herdPage:0,herdFilter:'all',herdQ:'',herdStatus:'',herdAll:false,herdSub:'herd',culPage:0,culQ:'',culOnlyHerd:false,
   editCase:null,caseQ:'',caseFrom:'',caseTo:'',caseType:'',caseOutcome:'',sumMonth:'',showMonth:false,quick:null,cowQ:'',cowCase:'',sumFrom:'',sumTo:'',riskEdit:null};
 let herdIdx=new Map(), casesByCow=new Map(), culByCow=new Map();
@@ -438,15 +438,34 @@ async function put(coll,id,data){
   catch(e){if(q&&isNetErr(e)){queueOut(coll,id,body);return;}throw e;}
 }
 const devId=(()=>{let d=lsGet('dev');if(!d){d='d'+Math.random().toString(36).slice(2,8);lsSet('dev',d);}return d;})();
-const who=()=>S.userId||S.userEmail||devId;
+/* who made a change: stored as "name role" (e.g. ออย สัตวบาล) so the history reads the same everywhere, even after the person leaves */
+const ROLE_TH={staff:'สัตวบาล',vet:'สัตวแพทย์',admin:'ผู้ดูแลระบบ'};
+const ROLE_LIST=[['staff','สัตวบาล'],['vet','สัตวแพทย์'],['admin','ผู้ดูแลระบบ']];
+const personLabel=(name,role)=>[String(name||'').trim(),ROLE_TH[role]||role||''].filter(Boolean).join(' ');
+const who=()=>S.userLabel||S.userId||S.userEmail||devId;
+function setMe(p){S.me=p||null;S.userLabel=p&&p.name?personLabel(p.name,p.role):'';renderUserBox();renderAlerts();}
+function renderUserBox(){const ub=$('#userBox');if(!ub)return;if(S.mode==='pwa'){if(typeof setUser==='function'&&S.userEmail)setUser(S.userEmail);return;}
+  const lbl=S.userLabel||S.userName||'';ub.innerHTML=lbl||S.canWrite?`<button type="button" class="btn sm" id="meBtn" title="ชื่อและบทบาทที่ใช้บันทึกว่าใครแก้ไข">${esc(lbl||'ตั้งชื่อผู้ใช้')}${S.canWrite?'':' · ดูอย่างเดียว'}</button>`:'';}
+function mePanelHTML(){const m=S.me||{};const pwa=S.mode==='pwa';
+  return `<div class="panel" style="display:grid;gap:10px;max-width:520px;margin-left:auto"><h3 style="margin:0">ชื่อและบทบาทของคุณ</h3>
+   <div class="src">ใช้บันทึกว่าใครสร้างหรือแก้ไขข้อมูล เช่น <b>ออย สัตวบาล</b> · ข้อมูลที่บันทึกไปแล้วจะคงชื่อเดิม</div>
+   <div class="fgrid" style="grid-template-columns:1fr 1fr"><label class="f"><span class="req">ชื่อเล่น / ชื่อ</span><input type="text" id="me_name" maxlength="30" value="${esc(m.name||(pwa?'':S.userName)||'')}"></label>
+   <label class="f">บทบาท<select id="me_role" ${pwa?'disabled title="ผู้ดูแลระบบเป็นผู้กำหนดบทบาท"':''}>${ROLE_LIST.map(([v,l])=>`<option value="${v}"${(m.role||'staff')===v?' selected':''}>${l}</option>`).join('')}</select></label></div>
+   <div class="src">จะแสดงเป็น: <b id="me_prev">${esc(personLabel(m.name||(pwa?'':S.userName),m.role||'staff'))}</b></div>
+   <div class="row"><button type="button" class="btn pri" id="meSave">บันทึก</button><button type="button" class="btn" id="meClose">ปิด</button></div></div>`;}
+function toggleMe(open){const p=$('#mePanel');if(!p)return;if(open===false||(!open&&!p.hidden)){p.hidden=true;return;}p.innerHTML=mePanelHTML();p.hidden=false;const n=$('#me_name');if(n)n.focus();}
+async function saveMe(){const name=$('#me_name').value.trim(),role=$('#me_role').value;if(!name)return toast('กรุณาใส่ชื่อ');
+  try{await saveMeImpl(name,role);setMe(Object.assign({},S.me||{},{name,role:S.mode==='pwa'?(S.role||role):role}));toggleMe(false);toast('บันทึกแล้ว: '+S.userLabel);}catch(e){toast('บันทึกไม่สำเร็จ ('+(e.code||e.message)+')');}}
+async function saveMeImpl(name,role){await S.db.collection('members').doc(S.userEmail).update({name});}
 async function audit(action,coll,docId,summary,extra){try{const at=new Date().toISOString().slice(0,19);const id=at.replace(/\D/g,'')+'-'+Math.random().toString(36).slice(2,6);
   await put('audit',id,Object.assign({at,by:who(),action,coll,docId:String(docId),summary:String(summary||'').slice(0,300)},extra||{}));}catch(e){}}
 async function auditFor(docId){try{if(S.db&&S.db.collection('audit').where){const q=await S.db.collection('audit').where('docId','==',String(docId)).get();return (q.docs||[]).map(d=>d.data()).sort((a,b)=>(b.at||'').localeCompare(a.at||''));}}catch(e){}
   return Object.values(S.audit||{}).filter(a=>a.docId===String(docId)).sort((a,b)=>(b.at||'').localeCompare(a.at||''));}
-async function whoNames(ids){const out={};ids.forEach(i=>out[i]=i&&i.includes('@')?i:'');if(S.user&&S.user.profiles){try{const ps=await S.user.profiles(ids.filter(i=>i&&!i.includes('@')&&!/^d[a-z0-9]{6}$/.test(i)));Object.entries(ps).forEach(([k,v])=>out[k]=v.name||'');}catch(e){}}
+const isLabel=i=>!!i&&(i.includes('@')||/\s|[^\x00-\x7f]/.test(i));
+async function whoNames(ids){const out={};ids.forEach(i=>out[i]=isLabel(i)?i:(S.people&&S.people[i]&&S.people[i].name?personLabel(S.people[i].name,S.people[i].role):''));ids=ids.filter(i=>!out[i]);if(S.user&&S.user.profiles){try{const ps=await S.user.profiles(ids.filter(i=>i&&!i.includes('@')&&!/^d[a-z0-9]{6}$/.test(i)));Object.entries(ps).forEach(([k,v])=>out[k]=v.name||'');}catch(e){}}
   ids.forEach(i=>{if(!out[i])out[i]=i===devId?'อุปกรณ์นี้':/^d[a-z0-9]{6}$/.test(i||'')?'อุปกรณ์ '+i.slice(1,4):'ผู้ใช้';});return out;}
 /* deleted documents go to trash first so they can be restored */
-async function softDel(coll,id,label){const src=coll==='cases'?S.cases[id]:coll==='culx'?S.culx[id]:null;if(src)await put('trash',coll+'__'+id,{coll,id,data:src,label:label||id,deletedAt:new Date().toISOString().slice(0,19),by:who()});
+async function softDel(coll,id,label){const src=coll==='cases'?S.cases[id]:coll==='culx'?S.culx[id]:coll==='scc'?S.scc[id]:null;if(src)await put('trash',coll+'__'+id,{coll,id,data:src,label:label||id,deletedAt:new Date().toISOString().slice(0,19),by:who()});
   await del(coll,id);await audit('delete',coll,id,'ลบ '+(label||id)+' (กู้คืนได้จากถังขยะ)');}
 async function del(coll,id){if(!S.db){applyLocal(coll,id,null);return;}const q=false;if(q&&!navigator.onLine){queueOut(coll,id,null,true);return;}
   try{await settle(S.db.collection(coll).doc(id).delete());}catch(e){if(q&&isNetErr(e)){queueOut(coll,id,null,true);return;}throw e;}}
@@ -455,8 +474,9 @@ function applyLocal(coll,id,data){
   if(coll==='risk'){if(data)S.risk[id]=data;else delete S.risk[id];}
   if(coll==='herd'){if(data)S.herdChunks[id]=data.rows;else delete S.herdChunks[id];}
   if(coll==='cultures'){if(data)S.culChunks[id]=data.rows;else delete S.culChunks[id];}
-  if(coll==='meta'){if(id==='herd'){S.herdMeta=data;S.herdCols=data?data.cols:[];} if(id==='cultures')S.culMeta=data;if(id==='drugs')S.drugs=(data&&data.items)||[];if(id==='settings')S.settings=Object.assign({recurDays:14},data||{});}
+  if(coll==='meta'){if(id==='herd'){S.herdMeta=data;S.herdCols=data?data.cols:[];} if(id==='cultures')S.culMeta=data;if(id==='scc')S.sccMeta=data;if(id==='drugs')S.drugs=(data&&data.items)||[];if(id==='settings')S.settings=Object.assign({recurDays:14},data||{});}
   if(coll==='culx'){if(data)S.culx[id]=data;else delete S.culx[id];}
+  if(coll==='scc'){if(data)S.scc[id]=data;else delete S.scc[id];rebuildScc();}
   if(coll==='notes')S.note=data;
   if(coll==='trash'){S.trash=S.trash||{};if(data)S.trash[id]=data;else delete S.trash[id];}
   if(coll==='audit'){S.audit=S.audit||{};if(data)S.audit[id]=data;}
@@ -473,9 +493,13 @@ const CHANGELOG=[
   'ระยะหยุดยานม (วัน/ชั่วโมง/มื้อรีด) และเนื้อ · ยาที่ไม่ทราบระยะหยุดยา โคอยู่ในรายการห้ามส่งนมจนกว่าจะใส่ข้อมูล · วันผ่านยาคิดรวมทั้งตัว',
   'บันทึกติดตามอาการ เคสเต้าใหม่ระหว่างรักษา เกณฑ์แยกเคสใหม่ 14 วัน · ประเภทเคสคำนวณใหม่อัตโนมัติ',
   'ผลเพาะเชื้อลงเองได้ นำเข้าไฟล์แบบเพิ่มต่อ ตรวจรายการซ้ำ',
+  'ฐานข้อมูล SCC รายตัว (ค่า Cells จากไฟล์ผลตรวจน้ำนม) แสดง SCC 3 ครั้งล่าสุดในหน้าบันทึกโคป่วย เตือนเมื่อยังไม่นำเข้าผลเดือนก่อน',
   'ส่งรายงานประจำวัน รายงานฝูงรายเดือน/ช่วงวันที่ ดาวน์โหลด Excel/PDF/PowerPoint ฟอนต์ TH Sarabun New',
   'ประวัติการแก้ไข ถังขยะ สำรอง/กู้คืน ย้อนกลับการนำเข้า เลขเคสไม่ซ้ำ เตือนเมื่อมีคนแก้เคสเดียวกัน',
-  'สิทธิ์: ผู้ดูแลและสัตวแพทย์นำเข้าไฟล์/แก้ฐานข้อมูลยา · พนักงานบันทึกเคส',
+  'สมาชิกทุกคนนำเข้าไฟล์ แก้ฐานข้อมูลยา และบันทึกเคสได้ (ผู้ดูแลระบบจัดการรายชื่อผู้ใช้)',
+  'ใช้เฉพาะระยะหยุดยานม (ตัดระยะหยุดยาเนื้อออก) · ผลเพาะเชื้อในเคส เอาออก ลบ หรือเลือกผลอื่นมาเชื่อมได้',
+  'หน้าบันทึกโคป่วยเริ่มที่รายการเคส ค้นหาด้วยเบอร์โค แล้วเปิดเคสเพื่อเติมข้อมูล หรือเพิ่มเคสใหม่',
+  'บันทึกชื่อคนแก้ไขเป็น ชื่อ + บทบาท เช่น ออย สัตวบาล · กดชื่อมุมขวาบนเพื่อตั้งชื่อ ผู้ดูแลระบบแก้ชื่อได้ในแท็บผู้ใช้',
   'หน้าจอมือถือ แถบเมนูด้านล่าง แถบเวอร์ชัน']]];
 const verCmp=(a,b)=>{const x=String(a).split('.').map(Number),y=String(b).split('.').map(Number);for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d;}return 0;};
 function renderVer(){const b=$('#verBadge');if(!b)return;const seen=lsGet('verSeen');const remote=S.remoteVer&&verCmp(S.remoteVer,APP_VER)>0?S.remoteVer:'';
@@ -495,12 +519,12 @@ const CFG=window.FIREBASE_CONFIG||{};
 const configured=!!(CFG.apiKey&&CFG.projectId);
 let unsubs=[];
 function gate(show,msg,cls){$('#gate').hidden=!show;const m=$('#gateMsg');if(msg){m.hidden=false;m.className='note '+(cls||'');m.textContent=msg;}else m.hidden=true;}
-function setUser(u){$('#userBox').innerHTML=u?`<span class="net${navigator.onLine?'':' off'}" id="netDot">${navigator.onLine?'ออนไลน์':'ออฟไลน์'}</span><span>${esc(u)}</span><button class="btn sm" id="logout">ออกจากระบบ</button>`:'';}
+function setUser(u){$('#userBox').innerHTML=u?`<span class="net${navigator.onLine?'':' off'}" id="netDot">${navigator.onLine?'ออนไลน์':'ออฟไลน์'}</span><button type="button" class="btn sm" id="meBtn" title="${esc(u)}">${esc(S.userLabel||u)}</button><button class="btn sm" id="logout">ออกจากระบบ</button>`:'';}
 window.addEventListener('online',()=>{S.status='';setUser(S.userEmail);syncLine();});
 window.addEventListener('offline',()=>{S.status='ออฟไลน์: บันทึกได้ตามปกติ ข้อมูลจะซิงก์เมื่อมีสัญญาณ';setUser(S.userEmail);syncLine();});
 async function connect(){
   if(!configured){
-    S.ready={herd:true,cul:true,cases:true,risk:true};
+    S.ready={herd:true,cul:true,scc:true,cases:true,risk:true};
     gate(true,'ยังไม่ได้ตั้งค่า Firebase: ใส่ค่าในไฟล์ firebase-config.js ตามคู่มือ README ก่อนใช้งานจริง','warn');
     $('#loginFields').hidden=true;$('#demoBtn').hidden=false;return;}
   firebase.initializeApp(CFG);
@@ -508,17 +532,17 @@ async function connect(){
   try{await db.enablePersistence({synchronizeTabs:true});}catch(e){/* private mode or old browser: online only */}
   firebase.auth().onAuthStateChanged(async u=>{
     unsubs.forEach(f=>f());unsubs=[];S.db=null;
-    if(!u){S.userEmail='';setUser('');gate(true);return;}
+    if(!u){S.userEmail='';S.userLabel='';S.me=null;setUser('');gate(true);return;}
     const email=(u.email||'').toLowerCase();
     S.role='';
     try{const m=await db.collection('members').doc(email).get();
-      if(m.exists)S.role=(m.data()||{}).role||'';
+      if(m.exists){S.role=(m.data()||{}).role||'';S.memberName=(m.data()||{}).name||'';}
       if(!m.exists){gate(true,`บัญชี ${email} ยังไม่ได้รับสิทธิ์ใช้งาน ให้ผู้ดูแลเพิ่มอีเมลนี้ในคอลเลกชัน members`,'bad');await firebase.auth().signOut();return;}}
     catch(e){ if(e.code==='permission-denied'){gate(true,`บัญชี ${email} ยังไม่ได้รับสิทธิ์ใช้งาน`,'bad');await firebase.auth().signOut();return;} /* offline: continue from cache */ }
-    S.userEmail=email;S.isAdmin=['admin','vet'].includes(S.role);S.canWrite=true;document.body.classList.toggle('not-admin',!S.isAdmin);setUser(email);$('#usersTab').hidden=S.role!=='admin';gate(false);listen(db);
+    S.userEmail=email;S.mode='pwa';S.me={name:S.memberName||'',role:S.role};S.userLabel=S.memberName?personLabel(S.memberName,S.role):'';S.isAdmin=true;S.canWrite=true;document.body.classList.toggle('not-admin',!S.isAdmin);setUser(email);$('#usersTab').hidden=S.role!=='admin';gate(false);listen(db);
   });
 }
-/* downloads in the PWA: save through a temporary link */
+/* downloads in the PWA: share sheet on phones, otherwise a temporary link */
 const MIME={pdf:'application/pdf',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',ttf:'font/ttf',json:'application/json'};
 S.dl={save:async({filename,data})=>{const blob=new Blob([data],{type:MIME[(filename.split('.').pop()||'').toLowerCase()]||'application/octet-stream'});
   try{const file=new File([blob],filename,{type:blob.type});if(navigator.canShare&&navigator.canShare({files:[file]})&&/iPhone|iPad|Android/i.test(navigator.userAgent)){await navigator.share({files:[file],title:filename});return;}}catch(e){if(e&&e.name==='AbortError')return;}const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},3000);}};
@@ -526,8 +550,9 @@ function listen(db){
   S.db=db;
   const err=e=>{syncLine('ฐานข้อมูลขัดข้อง ('+(e&&e.code)+')');};
   const on=(c,f)=>unsubs.push(db.collection(c).onSnapshot(s=>{if(S.onLive&&s.metadata&&!s.metadata.fromCache)S.onLive();f(s);},err));
-  on('meta',s=>{s.docs.forEach(d=>{const v=d.data();if(d.id==='herd'){S.herdMeta=v;S.herdCols=v.cols||[];}if(d.id==='cultures')S.culMeta=v;if(d.id==='drugs')S.drugs=v.items||[];if(d.id==='settings')S.settings=Object.assign({recurDays:14},v);if(d.id==='backup')S.backupMeta=v;if(d.id==='app'){S.appMeta=v;if(v.version&&verCmp(v.version,APP_VER)>0){S.remoteVer=v.version;renderVer();}}});if(!S._verAnnounced&&S.live!==undefined){S._verAnnounced=true;if(!S.appMeta||verCmp(APP_VER,S.appMeta.version||'0')>0)put('meta','app',{version:APP_VER,date:APP_DATE,at:new Date().toISOString().slice(0,19)}).catch(()=>{});}queueRender();});
+  on('meta',s=>{s.docs.forEach(d=>{const v=d.data();if(d.id==='herd'){S.herdMeta=v;S.herdCols=v.cols||[];}if(d.id==='cultures')S.culMeta=v;if(d.id==='scc')S.sccMeta=v;if(d.id==='drugs')S.drugs=v.items||[];if(d.id==='settings')S.settings=Object.assign({recurDays:14},v);if(d.id==='backup')S.backupMeta=v;if(d.id==='app'){S.appMeta=v;if(v.version&&verCmp(v.version,APP_VER)>0){S.remoteVer=v.version;renderVer();}}});if(!S._verAnnounced&&S.live!==undefined){S._verAnnounced=true;if(!S.appMeta||verCmp(APP_VER,S.appMeta.version||'0')>0)put('meta','app',{version:APP_VER,date:APP_DATE,at:new Date().toISOString().slice(0,19)}).catch(()=>{});}queueRender();});
   on('trash',s=>{S.trash={};s.docs.forEach(d=>S.trash[d.id]=d.data());});
+  on('scc',s=>{S.scc={};s.docs.forEach(d=>S.scc[d.id]=d.data());S.ready.scc=true;rebuildScc();queueRender();});
   on('culx',s=>{S.culx={};s.docs.forEach(d=>S.culx[d.id]=d.data());overlayOutbox('culx',S.culx);queueRender();});
   on('herd',s=>{S.herdChunks={};s.docs.forEach(d=>S.herdChunks[d.id]=dec(d.data().rows));S.ready.herd=true;queueRender();});
   on('cultures',s=>{S.culChunks={};s.docs.forEach(d=>S.culChunks[d.id]=d.data().rows||[]);S.ready.cul=true;queueRender();});
@@ -590,15 +615,16 @@ function partialRefresh(r){
 /* ============ MODULE 1: herd & cultures ============ */
 function viewHerd(){
   const sub=UI.herdSub;
-  return `<section class="sec-h"><div><h2>ฐานข้อมูลโค เพาะเชื้อ &amp; ยา</h2>
-    <p class="lead">รายชื่อโคตามรูปแบบไฟล์ NP (ส่งออกจากโปรแกรมจัดการฟาร์ม) และผลเพาะเชื้อจากห้องปฏิบัติการ อัปเดตได้โดยนำเข้าไฟล์ Excel ใหม่</p></div>
+  return `<section class="sec-h"><div><h2>ฐานข้อมูลโค</h2>
+    <p class="lead">อัปโหลดรายชื่อโคทุกวัน ผลเพาะเชื้อและ SCC ทุกเดือน ฐานข้อมูลยานำเข้าได้ด้วย Excel และเพิ่มรายชื่อยาผ่านแอป</p></div>
     <div class="seg" role="radiogroup" aria-label="ชุดข้อมูล">
       <label><input type="radio" name="herdSub" value="herd" ${sub==='herd'?'checked':''}>รายชื่อโค</label>
       <label><input type="radio" name="herdSub" value="cul" ${sub==='cul'?'checked':''}>ผลเพาะเชื้อ</label>
+      <label><input type="radio" name="herdSub" value="scc" ${sub==='scc'?'checked':''}>SCC</label>
       <label><input type="radio" name="herdSub" value="drug" ${sub==='drug'?'checked':''}>ฐานข้อมูลยา</label>
       <label><input type="radio" name="herdSub" value="backup" ${sub==='backup'?'checked':''}>สำรอง/กู้คืน</label></div></section>
-  ${dataFresh().map(x=>`<div class="note warn" style="margin-bottom:10px">${esc(x.msg)}${x.k==='backup'&&sub!=='backup'?' <button type="button" class="btn sm" data-herdsub="backup">ไปหน้าสำรองข้อมูล</button>':''}${x.k==='cul'&&sub!=='cul'?' <button type="button" class="btn sm" data-herdsub="cul">ไปหน้าผลเพาะเชื้อ</button>':''}</div>`).join('')}
-  ${sub==='herd'?herdPanel():sub==='drug'?drugPanel():sub==='backup'?backupPanel():culPanel()}`;
+  ${dataFresh().map(x=>`<div class="note warn" style="margin-bottom:10px">${esc(x.msg)}${x.k==='backup'&&sub!=='backup'?' <button type="button" class="btn sm" data-herdsub="backup">ไปหน้าสำรองข้อมูล</button>':''}${x.k==='cul'&&sub!=='cul'?' <button type="button" class="btn sm" data-herdsub="cul">ไปหน้าผลเพาะเชื้อ</button>':''}${x.k==='scc'&&sub!=='scc'?' <button type="button" class="btn sm" data-herdsub="scc">ไปหน้า SCC</button>':''}</div>`).join('')}
+  ${sub==='herd'?herdPanel():sub==='scc'?sccPanel():sub==='drug'?drugPanel():sub==='backup'?backupPanel():culPanel()}`;
 }
 /* data freshness: herd list older than 3 days; previous month's culture results due by the 5th of the following month */
 function dataFresh(){const td=today(),out=[];const m=S.herdMeta;
@@ -606,12 +632,14 @@ function dataFresh(){const td=today(),out=[];const m=S.herdMeta;
   if(S.ready.cul){const pm=prevMonth(td.slice(0,7),1),pmStart=pm+'-01',due=td.slice(0,7)+'-05';
     const imp=culRowsCur();const last=imp.map(c=>c.sent).filter(Boolean).sort().pop()||'';
     if(td>due&&last<pmStart)out.push({k:'cul',msg:`ยังไม่ได้นำเข้าผลเพาะเชื้อเดือน ${thMonth(pm)} (ครบกำหนดวันที่ ${thDate(due)}) · ผลล่าสุดในระบบส่งตรวจวันที่ ${last?fd(last):'–'}`});}
+  if(S.ready.scc){const pm=prevMonth(td.slice(0,7),1),pmStart=pm+'-01',due=td.slice(0,7)+'-05';const last=Object.keys(S.scc).sort().pop()||'';
+    if(td>due&&last<pmStart)out.push({k:'scc',msg:`ยังไม่ได้นำเข้าผล SCC เดือน ${thMonth(pm)} (ครบกำหนดวันที่ ${thDate(due)}) · ผลล่าสุดในระบบตรวจวันที่ ${last?fd(last):'–'}`});}
   if(S.ready.cases&&Object.keys(S.cases).length&&S.live!==undefined){const b=S.backupMeta&&S.backupMeta.at;const d=b?dDays(td,b.slice(0,10)):null;if(!b||d>30)out.push({k:'backup',msg:b?`ไม่ได้สำรองข้อมูลมา ${d} วัน`:'ยังไม่เคยสำรองข้อมูล ควรดาวน์โหลดไฟล์สำรองเก็บไว้'});}
   return out;}
-const DRUG_COLS=[['ชื่อยา','name'],['ตัวยา','active'],['ความเข้มข้น (mg/ml)','conc','n'],['Dose (mg/kg)','dose','n'],['ขนาดคงที่ (ถ้าไม่คิดตามน้ำหนัก)','fixed'],['Route','route'],['ระยะหยุดยานม','wd','n'],['หน่วยระยะหยุดยานม (วัน/ชั่วโมง/มื้อรีด)','wdUnit'],['ระยะหยุดยาเนื้อ (วัน)','wdMeat','n']];
+const DRUG_COLS=[['ชื่อยา','name'],['ตัวยา','active'],['ความเข้มข้น (mg/ml)','conc','n'],['Dose (mg/kg)','dose','n'],['ขนาดคงที่ (ถ้าไม่คิดตามน้ำหนัก)','fixed'],['Route','route'],['ระยะหยุดยานม','wd','n'],['หน่วยระยะหยุดยานม (วัน/ชั่วโมง/มื้อรีด)','wdUnit']];
 function drugTemplate(){const rows=[DRUG_COLS.map(c=>c[0])].concat(S.drugs.map(d=>DRUG_COLS.map(([,k])=>k==='wdUnit'?((WDU_UNITS.find(x=>x[0]===(d.wdUnit||'d'))||[])[1]):d[k]??'')));
   const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:26},{wch:28},{wch:18},{wch:14},{wch:26},{wch:16},{wch:18}];XLSX.utils.book_append_sheet(wb,ws,'DRUGS');
-  const help=[['วิธีกรอก'],['1 แถว = ยา 1 รายการ · ชื่อยาห้ามซ้ำ ระบบใช้ชื่อยาจับคู่กับรายการเดิม (ไม่สนตัวพิมพ์เล็ก/ใหญ่)'],['ยาที่คิดตามน้ำหนัก: ใส่ ความเข้มข้น (mg/ml) และ Dose (mg/kg) · ยาอัดเต้าหรือขนาดคงที่: เว้น Dose แล้วใส่ ขนาดคงที่ เช่น 1 หลอด/เต้า'],['Route เลือกจาก: '+LISTS.route.join(' / ')],['ระยะหยุดยานม ใส่ตัวเลขตามฉลาก แล้วเลือกหน่วย วัน / ชั่วโมง / มื้อรีด · ชั่วโมงและมื้อรีดระบบปัดขึ้นเป็นวันแล้วบวก 1 วัน'],['ระยะหยุดยาเนื้อ ใส่เป็นจำนวนวันตามฉลาก'],['การนำเข้าจะเพิ่มยาใหม่และอัปเดตยาที่ชื่อตรงกัน ยาในแอปที่ไม่มีในไฟล์จะไม่ถูกลบ']];
+  const help=[['วิธีกรอก'],['1 แถว = ยา 1 รายการ · ชื่อยาห้ามซ้ำ ระบบใช้ชื่อยาจับคู่กับรายการเดิม (ไม่สนตัวพิมพ์เล็ก/ใหญ่)'],['ยาที่คิดตามน้ำหนัก: ใส่ ความเข้มข้น (mg/ml) และ Dose (mg/kg) · ยาอัดเต้าหรือขนาดคงที่: เว้น Dose แล้วใส่ ขนาดคงที่ เช่น 1 หลอด/เต้า'],['Route เลือกจาก: '+LISTS.route.join(' / ')],['ระยะหยุดยานม ใส่ตัวเลขตามฉลาก แล้วเลือกหน่วย วัน / ชั่วโมง / มื้อรีด · ชั่วโมงและมื้อรีดระบบปัดขึ้นเป็นวันแล้วบวก 1 วัน'],['การนำเข้าจะเพิ่มยาใหม่และอัปเดตยาที่ชื่อตรงกัน ยาในแอปที่ไม่มีในไฟล์จะไม่ถูกลบ']];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(help),'วิธีกรอก');saveFile('ฐานข้อมูลยา_'+today()+'.xlsx',wb);}
 function normRoute(v){v=String(v||'').trim();if(!v)return '';const k=v.toLowerCase();return LISTS.route.find(r=>r.toLowerCase()===k)||LISTS.route.find(r=>r.toLowerCase().startsWith(k)||k.startsWith(r.toLowerCase().split(' ')[0]))||(/เต้า|imm|intramam/i.test(v)?'IMM (ใส่เต้า)':v);}
 async function importDrugs(file){const wb=await readWorkbook(file);let rows=null,hi=-1;
@@ -624,13 +652,13 @@ async function importDrugs(file){const wb=await readWorkbook(file);let rows=null
     if(o.dose!=null&&!o.conc){R.skipped.push(`แถว ${line} ${o.name}: มี Dose แต่ไม่มีความเข้มข้น`);return;}
     if(o.dose==null&&!o.fixed){R.skipped.push(`แถว ${line} ${o.name}: ไม่มีทั้ง Dose และขนาดคงที่`);return;}
     const key=o.name.toLowerCase();if(seen.has(key)){R.skipped.push(`แถว ${line} ${o.name}: ชื่อซ้ำในไฟล์`);return;}seen.add(key);
-    const j=items.findIndex(d=>String(d.name).toLowerCase()===key);const u=String(o.wdUnit||'').trim();const clean={name:o.name,active:o.active||'',conc:o.conc,dose:o.dose,fixed:o.fixed||'',route:o.route||'',wd:o.wd,wdUnit:/ชั่วโมง|hour|^h/i.test(u)?'h':/มื้อ|milking|^m/i.test(u)?'m':'d',wdMeat:o.wdMeat};
+    const j=items.findIndex(d=>String(d.name).toLowerCase()===key);const u=String(o.wdUnit||'').trim();const clean={name:o.name,active:o.active||'',conc:o.conc,dose:o.dose,fixed:o.fixed||'',route:o.route||'',wd:o.wd,wdUnit:/ชั่วโมง|hour|^h/i.test(u)?'h':/มื้อ|milking|^m/i.test(u)?'m':'d'};
     if(j<0){items.push(clean);R.added.push(o.name);}else{const a=JSON.stringify(DRUG_COLS.map(([,k])=>items[j][k]??null)),b=JSON.stringify(DRUG_COLS.map(([,k])=>clean[k]??null));if(a===b)R.same.push(o.name);else{items[j]=clean;R.updated.push(o.name);}}});
   if(R.added.length||R.updated.length)await saveDrugs(items);UI.drugReport=R;render();toast(`ฐานข้อมูลยา: ใหม่ ${R.added.length} · อัปเดต ${R.updated.length} · เหมือนเดิม ${R.same.length}${R.skipped.length?' · ข้าม '+R.skipped.length:''}`);}
 function drugReportHTML(){const R=UI.drugReport;if(!R)return '';
   return `<div class="note" style="display:grid;gap:4px"><b>ผลการนำเข้า ${esc(R.file)}</b><div>เพิ่มใหม่ ${R.added.length}${R.added.length?': '+esc(R.added.join(', ')):''}</div><div>อัปเดต ${R.updated.length}${R.updated.length?': '+esc(R.updated.join(', ')):''}</div><div>เหมือนเดิม ${R.same.length}</div>${R.skipped.length?`<div class="pill warn" style="justify-self:start">ข้าม ${R.skipped.length} แถว</div><ul style="margin:0;padding-left:20px">${R.skipped.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}<div><button type="button" class="btn sm" id="drugReportClose">ปิด</button></div></div>`;}
-function backupData(){const C={cases:S.cases,culx:S.culx,risk:S.risk,trash:S.trash||{},notes:S.note?{farm:S.note}:{},meta:{}};
-  if(S.herdMeta)C.meta.herd=S.herdMeta;if(S.culMeta)C.meta.cultures=S.culMeta;C.meta.drugs={items:S.drugs};C.meta.settings=S.settings;
+function backupData(){const C={cases:S.cases,culx:S.culx,scc:S.scc,risk:S.risk,trash:S.trash||{},notes:S.note?{farm:S.note}:{},meta:{}};
+  if(S.herdMeta)C.meta.herd=S.herdMeta;if(S.culMeta)C.meta.cultures=S.culMeta;if(S.sccMeta)C.meta.scc=S.sccMeta;C.meta.drugs={items:S.drugs};C.meta.settings=S.settings;
   const g1=(S.herdMeta&&S.herdMeta.gen)||'',g2=(S.culMeta&&S.culMeta.gen)||'';C.herd={};Object.keys(S.herdChunks).filter(k=>genOf(k)===g1).forEach(k=>C.herd[k]={rows:S.herdChunks[k]});
   C.cultures={};Object.keys(S.culChunks).filter(k=>genOf(k)===g2).forEach(k=>C.cultures[k]={rows:S.culChunks[k]});
   if(C.meta.herd){C.meta.herd=Object.assign({},C.meta.herd);delete C.meta.herd.prev;}if(C.meta.cultures){C.meta.cultures=Object.assign({},C.meta.cultures);delete C.meta.cultures.prev;}
@@ -640,7 +668,7 @@ async function doBackup(){const d=backupData();const n=Object.values(d.collectio
 async function readRestore(file){const t=await file.text();let d;try{d=JSON.parse(t);}catch(e){throw new Error('ไฟล์ไม่ใช่ไฟล์สำรองของแอปนี้');}
   if(!d||!d.collections)throw new Error('ไฟล์ไม่ใช่ไฟล์สำรองของแอปนี้');UI.restore={file:file.name,d};render();}
 async function doRestore(){const R=UI.restore;if(!R)return;const C=R.d.collections;let n=0;toast('กำลังกู้คืน…');
-  for(const coll of ['herd','cultures','cases','culx','risk','trash','notes']){for(const [id,doc] of Object.entries(C[coll]||{})){await put(coll,id,doc);n++;}}
+  for(const coll of ['herd','cultures','scc','cases','culx','risk','trash','notes']){for(const [id,doc] of Object.entries(C[coll]||{})){await put(coll,id,doc);n++;}}
   for(const [id,doc] of Object.entries(C.meta||{})){await put('meta',id,doc);n++;}
   await audit('restore','meta','backup',`กู้คืนจากไฟล์ ${R.file} (สำรองเมื่อ ${R.d.at}) ${n} รายการ`);UI.restore=null;toast('กู้คืนแล้ว '+n+' รายการ');render();}
 function backupPanel(){const b=S.backupMeta;const tr=Object.entries(S.trash||{}).sort((a,b2)=>(b2[1].deletedAt||'').localeCompare(a[1].deletedAt||''));const hm=S.herdMeta,cm=S.culMeta;
@@ -741,7 +769,7 @@ async function importHerd(file){
 async function linkManualCultures(recs){let n=0;const qs=x=>LISTS.quarter.filter(q=>String(x||'').toUpperCase().includes(q));
   for(const m of Object.values(S.culx)){if(m.lab)continue;const hit=recs.find(r=>norm(r.cow)===norm(m.cow)&&r.sent&&m.sent&&Math.abs(dDays(r.sent,m.sent))<=3&&(!qs(m.q).length||!qs(r.q).length||qs(m.q).some(q=>qs(r.q).includes(q))));
     if(!hit)continue;const u=Object.assign({},m,{lab:hit.lab,org:m.org||hit.org,ab:Object.keys(m.ab||{}).length?m.ab:hit.ab,rep:m.rep||hit.rep,linkedFrom:'import',updatedAt:new Date().toISOString().slice(0,19)});await put('culx',m.id,u);n++;
-    if(m.caseNo&&S.cases[m.caseNo]){const c=JSON.parse(JSON.stringify(S.cases[m.caseNo]));c.culture=mergeCulText(c.culture,u,m);await put('cases',c.caseNo,c);}}
+    if(m.caseNo&&S.cases[m.caseNo]&&!(S.cases[m.caseNo].culOff||[]).includes(String(m.id))){const c=JSON.parse(JSON.stringify(S.cases[m.caseNo]));c.culture=mergeCulText(c.culture,u,m);await put('cases',c.caseNo,c);}}
   return n;}
 function culReportHTML(){const R=UI.culReport;if(!R)return '';const list=(a,n=40)=>a.length?`<div class="src mono" style="overflow-wrap:anywhere">${esc(a.slice(0,n).join(', '))}${a.length>n?' … อีก '+(a.length-n):''}</div>`:'';
   return `<div class="note" style="display:grid;gap:6px"><b>ผลการนำเข้า ${esc(R.file)} (${R.rows} แถว)</b>
@@ -788,6 +816,73 @@ async function importCultures(file,replace){
   toast(`ผลเพาะเชื้อ: ใหม่ ${added} · ซ้ำ ${R.same.length} · อัปเดต ${R.changed.length} รายการ`);UI.herdSub='cul';render();
 }
 
+/* ============ SCC (individual cow somatic cell count, from the milk-test file) ============
+   one doc per test date in 'scc': {date,source,cows:[...],cells:[...]} (parallel arrays, Firestore has no nested arrays)
+   Cells column = x1,000 cells/ml */
+let sccByCow=new Map();
+const SCC_HI=200;
+function rebuildScc(){sccByCow=new Map();Object.values(S.scc||{}).forEach(t=>{(t.cows||[]).forEach((c,i)=>{const k=norm(c);if(!sccByCow.has(k))sccByCow.set(k,[]);sccByCow.get(k).push({date:t.date,cells:t.cells[i],cow:c});});});
+  sccByCow.forEach(a=>a.sort((x,y)=>(y.date||'').localeCompare(x.date||'')));}
+function sccFor(cow,asOf,n){return (sccByCow.get(norm(cow))||[]).filter(x=>!asOf||x.date<=asOf).slice(0,n||3);}
+const sccCls=v=>v==null?'':v>SCC_HI?'bad':'good';
+function sccHTML(){const cowEl=$('#f_cow');const cow=cowEl?cowEl.value.trim():'';if(!cow)return '';const det=($('#f_dateDetected')||{}).value||today();
+  const L=sccFor(cow,det,3);
+  const body=L.length?L.map(x=>`<span class="pill ${sccCls(x.cells)}" title="${x.cow!==cow?'เบอร์ในไฟล์ SCC: '+esc(x.cow):''}">${fd(x.date)} · <b>${x.cells==null?'–':fn(x.cells)}</b></span>`).join(' '):'<span class="src">ไม่มีผล SCC ก่อนวันที่พบอาการ</span>';
+  return `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center"><span style="font-size:12px;color:var(--fg2)">SCC 3 ครั้งล่าสุด (×1,000 เซลล์/มล.)</span>${body}</div>`;}
+function sccDateFrom(rows,fname){
+  for(const r of rows.slice(0,6))for(const v of (r||[])){if(v==null||v==='')continue;if(typeof v==='number'&&v<20000)continue;if(typeof v==='string'&&!/\d{1,4}[\/.-]\d{1,2}[\/.-]\d{2,4}/.test(v))continue;const d=toISO(v);if(d)return d;}
+  const m=String(fname||'').match(/(\d{1,2})[-_.](\d{1,2})[-_.](\d{2,4})/);if(m)return toISO(m[1]+'/'+m[2]+'/'+m[3]);return '';}
+async function readScc(file){
+  const wb=await readWorkbook(file);const sheets=[];
+  for(const n of wb.SheetNames){const a=aoa(wb.Sheets[n]);const hi=a.findIndex(r=>r&&r.some(c=>hkey(c)==='cells'));if(hi<0)continue;
+    const h=a[hi].map(hkey);const ci=h.findIndex(x=>x==='cells');let ni=h.findIndex(x=>x==='ชื่อสัตว์');if(ni<0)ni=h.findIndex(x=>/^(cow|cowno|cownumber|id|เบอร์โค)/.test(x));if(ni<0)continue;
+    const cows=[],cells=[],bad=[];const seen=new Map(),dup=[];
+    for(const r of a.slice(hi+1)){if(!r)continue;const c=str(r[ni]);if(!c)continue;const v=r[ci];const x=v==null||v===''?null:Number(v);
+      if(x!=null&&!isFinite(x)){bad.push(c);continue;}const k=norm(c);if(seen.has(k)){dup.push(seen.get(k)+' / '+c);}else seen.set(k,c);cows.push(c);cells.push(x==null?null:Math.round(x));}
+    if(cows.length)sheets.push({name:n,date:sccDateFrom(a.slice(0,hi),file.name),cows,cells,bad,dup});}
+  if(!sheets.length)throw new Error('ไม่พบชีทที่มีคอลัมน์ ชื่อสัตว์ และ Cells');
+  UI.sccPrev={file:file.name,sheets};UI.herdSub='scc';render();}
+async function saveScc(){const P=UI.sccPrev;if(!P)return;
+  for(const sh of P.sheets)if(!/^\d{4}-\d{2}-\d{2}$/.test(sh.date||''))return toast('ระบุวันที่ตรวจให้ครบทุกชีทก่อน');
+  if(P.sheets.some(sh=>sh.date>today()))return toast('วันที่ตรวจอยู่ในอนาคต ตรวจสอบอีกครั้ง');
+  const R={file:P.file,tests:[]};toast('กำลังบันทึกผล SCC…');
+  const byDate={};P.sheets.forEach(sh=>{const b=byDate[sh.date]=byDate[sh.date]||{cows:[],cells:[]};sh.cows.forEach((c,i)=>{b.cows.push(c);b.cells.push(sh.cells[i]);});});
+  for(const [date,b] of Object.entries(byDate)){const old=S.scc[date];const om=new Map();if(old)(old.cows||[]).forEach((c,i)=>om.set(norm(c)+'|'+c,old.cells[i]));
+    let added=0,same=0,changed=0;const nm=new Map(om);
+    b.cows.forEach((c,i)=>{const k=norm(c)+'|'+c;if(!om.has(k))added++;else if(om.get(k)===b.cells[i])same++;else changed++;nm.set(k,b.cells[i]);});
+    const inFile=new Set(b.cows.map(c=>norm(c)+'|'+c));const kept=[...om.keys()].filter(k=>!inFile.has(k)).length;
+    const cows=[],cells=[];nm.forEach((v,k)=>{cows.push(k.slice(k.indexOf('|')+1));cells.push(v);});
+    const inHerd=cows.filter(c=>herdIdx.has(norm(c))).length;
+    await put('scc',date,{date,source:P.file,cows,cells,n:cows.length,importedAt:new Date().toISOString().slice(0,19),by:who()});
+    R.tests.push({date,added,same,changed,kept,total:cows.length,inHerd,replaced:!!old});}
+  await put('meta','scc',{importedAt:new Date().toISOString().slice(0,19),source:P.file,dates:Object.keys(byDate),last:Object.keys(S.scc).concat(Object.keys(byDate)).sort().pop()});
+  await audit('import','scc',Object.keys(byDate).join(','),`นำเข้า SCC ${P.file}: `+R.tests.map(t=>`${t.date} ใหม่ ${t.added} · อัปเดต ${t.changed} · ซ้ำ ${t.same}`).join(' / '));
+  UI.sccPrev=null;UI.sccReport=R;render();toast('บันทึกผล SCC แล้ว');}
+const _arm={};function confirmOnce(k,msg){const n=Date.now();if(_arm[k]&&n-_arm[k]<4000){delete _arm[k];return true;}_arm[k]=n;toast(msg);return false;}
+async function delScc(date){if(!confirmOnce('delScc'+date,'กดอีกครั้งเพื่อยืนยันการลบผล SCC วันที่ '+fd(date)))return;await softDel('scc',date,'ผล SCC '+fd(date));toast('ลบแล้ว (กู้คืนได้จากถังขยะ)');}
+function sccPanel(){
+  if(!S.ready.scc)return `<div class="panel empty">กำลังโหลดผล SCC…</div>`;
+  const P=UI.sccPrev,R=UI.sccReport;
+  const prev=P?`<div class="note" style="display:grid;gap:8px"><b>ตรวจสอบก่อนบันทึก: ${esc(P.file)}</b>
+    ${P.sheets.map((sh,i)=>{const inH=sh.cows.filter(c=>herdIdx.has(norm(c))).length;const hi=sh.cells.filter(v=>v!=null&&v>SCC_HI).length;
+      return `<div style="display:grid;gap:4px"><div class="row" style="gap:8px;align-items:end"><span>ชีท <b>${esc(sh.name)}</b> · ${fn(sh.cows.length)} ตัว · อยู่ในรายชื่อฝูง ${fn(inH)} · SCC &gt; ${SCC_HI} = ${fn(hi)} ตัว</span>
+        <label class="f" style="width:170px">วันที่ตรวจ<input type="date" data-sccdate="${i}" value="${esc(sh.date||'')}"></label>${S.scc[sh.date]?'<span class="pill warn">มีผลวันนี้แล้ว: จะรวมและอัปเดตค่าที่ต่าง</span>':''}</div>
+        ${sh.dup.length?`<div class="src">เบอร์ที่อาจเป็นตัวเดียวกัน (ระบบตัดเลข 0 นำหน้า): ${esc(sh.dup.join(', '))}</div>`:''}${sh.bad.length?`<div class="src">ข้ามค่า Cells ที่ไม่ใช่ตัวเลข: ${esc(sh.bad.join(', '))}</div>`:''}</div>`;}).join('')}
+    <div class="row"><button type="button" class="btn pri" id="sccSave">บันทึกผล SCC</button><button type="button" class="btn" id="sccCancel">ยกเลิก</button></div></div>`:'';
+  const rep=R?`<div class="note" style="display:grid;gap:4px"><b>ผลการนำเข้า ${esc(R.file)}</b>${R.tests.map(t=>`<div>วันที่ตรวจ ${fd(t.date)}: ${t.replaced?`ใหม่ ${t.added} · อัปเดต ${t.changed} · ซ้ำ ${t.same}${t.kept?` · มีในระบบแต่ไม่มีในไฟล์นี้ ${t.kept} (คงไว้)`:''}`:`เพิ่ม ${t.added} ตัว`} · รวม ${t.total} ตัว · อยู่ในฝูง ${t.inHerd}</div>`).join('')}<div><button type="button" class="btn sm" id="sccReportClose">ปิด</button></div></div>`:'';
+  const tests=Object.values(S.scc).sort((a,b)=>b.date.localeCompare(a.date));
+  const trows=tests.map(t=>{const v=(t.cells||[]).filter(x=>x!=null);const hi=v.filter(x=>x>SCC_HI).length;const avg=v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null;
+    return `<tr><td>${fd(t.date)}</td><td class="num">${fn(t.n||(t.cows||[]).length)}</td><td class="num">${avg==null?'–':fn(avg)}</td><td class="num">${fn(hi)} (${v.length?Math.round(hi*100/v.length):0}%)</td><td class="src">${esc(t.source||'')}</td><td class="adm"><button type="button" class="btn sm" data-delscc="${esc(t.date)}">ลบ</button></td></tr>`;}).join('');
+  const q=(UI.sccQ||'').trim();let cowTbl='';
+  if(q){const L=sccFor(q,'',24);cowTbl=`<div class="tbl"><table><thead><tr><th>วันที่ตรวจ</th><th>เบอร์ในไฟล์</th><th>SCC (×1,000)</th></tr></thead><tbody>${L.map(x=>`<tr><td>${fd(x.date)}</td><td class="mono">${esc(x.cow)}</td><td class="num"><span class="pill ${sccCls(x.cells)}">${x.cells==null?'–':fn(x.cells)}</span></td></tr>`).join('')||'<tr><td colspan="3" class="empty">ไม่พบผล SCC ของโคตัวนี้</td></tr>'}</tbody></table></div>`;}
+  return `<div class="panel" style="display:grid;gap:12px">
+    <div class="toolbar"><div class="row"><label class="f" style="width:200px">ดูผล SCC รายตัว (เบอร์โค)<input type="search" id="sccQ" value="${esc(q)}"></label></div>
+      <div class="row"><span class="btn file adm">นำเข้าไฟล์ผล SCC (.xlsx)<input type="file" id="sccFile" accept=".xlsx,.xls"></span></div></div>
+    ${prev}${rep}
+    <div class="note">อ่านจากชีทที่มีคอลัมน์ <span class="mono">ชื่อสัตว์</span> และ <span class="mono">Cells</span> (ไฟล์ผลตรวจน้ำนมรายตัว) ใช้ค่า Cells เป็น SCC หน่วย ×1,000 เซลล์/มล. · วันที่ตรวจอ่านจากหัวไฟล์หรือชื่อไฟล์ (ปี พ.ศ. แปลงให้อัตโนมัติ) ตรวจสอบได้ก่อนบันทึก · นำเข้าวันเดิมซ้ำ ระบบรวมและอัปเดตเฉพาะค่าที่ต่าง · ค่า &gt; ${SCC_HI} แสดงเป็นสีแดง · ควรนำเข้าผลของเดือนก่อนภายในวันที่ 5</div>
+    ${cowTbl}
+    <div class="tbl"><table><thead><tr><th>วันที่ตรวจ</th><th>จำนวนโค</th><th>SCC เฉลี่ย</th><th>&gt; ${SCC_HI}</th><th>ไฟล์</th><th class="adm"></th></tr></thead><tbody>${trows||'<tr><td colspan="6" class="empty">ยังไม่มีผล SCC</td></tr>'}</tbody></table></div></div>`;}
+
 /* ============ MODULE 2: cases ============ */
 function blankCase(){return{caseNo:'',dateDetected:today(),inspector:'',treatDate:today(),cow:'',lact:null,calving:null,dim:null,repro:'',milking:'',lastBreed:null,daysBreed:null,yield:null,barn:'',group:'',quarter:'',quarters:[],cmt:'',blood:'No',palpation:'',secretion:'',fever:'No',appetite:'Normal',downer:'No',type:'',score:'',scc:null,culture:'',bw:null,care:{},vetNote:'',clearDate:'',withdrawDate:'',outcome:'กำลังรักษา',treatments:[]};}
 async function docExists(coll,id){if(!S.db)return false;try{const sn=await S.db.collection(coll).doc(id).get();if(!sn)return false;if(typeof sn.exists==='function')return !!sn.exists();if(sn.exists!==undefined)return !!sn.exists;if(typeof sn.data==='function')return sn.data()!=null;return true;}catch(e){return false;}}
@@ -795,14 +890,29 @@ async function docExists(coll,id){if(!S.db)return false;try{const sn=await S.db.
 async function newCaseNo(date){const taken=new Set(Object.keys(S.cases));for(let k=0;k<20;k++){const id=nextCaseNoFrom(date,taken);if(!(await docExists('cases',id)))return id;taken.add(id);}return nextCaseNoFrom(date,taken)+'-'+devId.slice(1,4);}
 function nextCaseNoFrom(date,taken){const y=(date||today()).slice(2,4);let max=0;taken.forEach(k=>{const m=k.match(/^MC(\d\d)-(\d+)$/);if(m&&m[1]===y)max=Math.max(max,+m[2]);});return 'MC'+y+'-'+String(max+1).padStart(4,'0');}
 function nextCaseNo(date){const y=(date||today()).slice(2,4);let max=0;Object.keys(S.cases).forEach(k=>{const m=k.match(/^MC(\d\d)-(\d+)$/);if(m&&m[1]===y)max=Math.max(max,+m[2]);});return 'MC'+y+'-'+String(max+1).padStart(4,'0');}
+function casesHead(){return `<section class="sec-h"><div><h2>บันทึกโคป่วยด้วยเต้านมอักเสบ</h2>
+    <p class="lead">ค้นหาเคสด้วยเบอร์โค เพิ่มข้อมูล ลงข้อมูลสรุปการรักษา บันทึก</p></div></section>`;}
+function casesListView(){return `${casesHead()}
+  <section class="panel" style="display:grid;gap:12px"><div class="toolbar"><div class="row" style="align-items:end;gap:8px"><label class="f" style="width:220px"><b>ค้นหาเคสด้วยเบอร์โค</b><input type="search" id="caseQ" value="${esc(UI.caseQ)}" inputmode="numeric" placeholder="พิมพ์เบอร์โค" autofocus></label>
+    <button type="button" class="btn pri" id="caseAdd">+ เพิ่มเคสใหม่</button></div><div class="row">
+    <label class="f" style="width:145px">ตั้งแต่<input type="date" id="caseFrom" value="${esc(UI.caseFrom)}"></label>
+    <label class="f" style="width:145px">ถึง<input type="date" id="caseTo" value="${esc(UI.caseTo)}"></label>
+    <label class="f" style="width:130px">ประเภท<select id="caseType">${opts(LISTS.type,UI.caseType)}</select></label>
+    <label class="f" style="width:170px">ผลการรักษา<select id="caseOutcome"><option value="">ทั้งหมด</option>${LISTS.outcome.concat(['ยังไม่บันทึกผล']).map(o=>`<option${o===UI.caseOutcome?' selected':''}>${o}</option>`).join('')}</select></label></div></div>
+    <div class="row" style="align-items:center;gap:8px"><span class="src">เกณฑ์แยกเคสใหม่: ถ้าเต้าเดิมกลับมามีอาการภายใน</span><input type="number" class="adm" id="set_recur" min="1" max="60" value="${recurDays()}" style="width:70px" aria-label="จำนวนวัน"><span class="src">วันหลังหาย (หรือหลังวันพบอาการถ้ายังไม่บันทึกวันหาย) ให้บันทึกเป็นการติดตามอาการของเคสเดิม เกินกว่านั้นเป็นเคส Recurrent · AHDB ใช้ 7 วัน, Ruegg (UW–Madison) ใช้ 14 วัน</span></div>
+    <div id="caseStatus">${caseStatusHTML()}</div>
+    <div id="fuBoxActive"></div>
+    <details ${UI.fu&&UI.fu.ctx==='active'?'open':''}><summary class="src" style="cursor:pointer">รายการกำลังรักษาและระยะหยุดยา (กดปุ่ม "หายแล้ว" เพื่อปิดเคสโดยไม่ต้องเปิดฟอร์ม)</summary><div id="caseActive" style="margin-top:8px">${activeTableHTML()}</div></details>
+    <div class="tbl" style="max-height:60vh" id="caseTable">${caseTableHTML()}</div></section>
+  <details class="panel desk"><summary class="src" style="cursor:pointer">นำเข้า / ส่งออกไฟล์ Excel</summary><div style="margin-top:10px"><div class="row"><span class="btn file">นำเข้า Excel (CASE_ENTRY / TREATMENT)<input type="file" id="caseFile" accept=".xls,.xlsx"></span><button class="btn" id="caseExport">ส่งออก Excel ตามเทมเพลต</button></div></div></details>`;}
 function viewCases(){
-  const c=UI.editCase||(UI.editCase=blankCase());
+  if(!UI.editCase)return casesListView();
+  const c=UI.editCase;
   const sel=(id,list,v)=>`<select id="${id}">${opts(list,v)}</select>`;
   const yn=(id,v,lbl)=>`<div class="f" role="radiogroup" aria-label="${lbl}">${lbl}<span class="seg">${LISTS.yn.map(o=>`<label><input type="radio" name="${id}" value="${o}" ${v===o?'checked':''}>${o==='Yes'?'ใช่':'ไม่'}</label>`).join('')}</span></div>`;
   const cq=caseQuarters(c);
-  return `<section class="sec-h"><div><h2>บันทึกโคป่วยด้วยเต้านมอักเสบ</h2>
-    <p class="lead">ใส่เบอร์โคแล้วระบบดึงท้อง วันคลอดล่าสุด และคำนวณ DIM จากโมดูลรายชื่อโคให้ ช่องรายการเลือกตามชีท LISTS และการรักษาตามชีท TREATMENT</p></div>
-</section>
+  return `${casesHead()}
+  <div class="row" style="margin-bottom:10px"><button type="button" class="btn" id="caseBack">← กลับไปรายการเคส</button></div>
   <form class="panel" id="caseForm" style="display:grid;gap:14px" autocomplete="off">
     <div class="sec-h"><h3 style="margin:0">${c.caseNo&&S.cases[c.caseNo]?'แก้ไขเคส <span class="mono">'+esc(c.caseNo)+'</span>':'เคสใหม่'}</h3>${linkInfoHTML(c)}<div id="cowHint" class="src"></div></div>
     <fieldset><legend>ข้อมูลเคสและตัวสัตว์</legend><div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">
@@ -836,7 +946,6 @@ function viewCases(){
     <fieldset><legend>สรุปการรักษา</legend><div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
       <label class="f">วันที่หายตะกอน<input type="date" id="f_clear" value="${esc(caseClear(c))}"></label>
       <label class="f">กำหนดวันผ่านยา<input type="date" id="f_wd" value="${esc(caseWd(c))}" ${c.wdManual?'data-touched="1"':''}></label>
-      <label class="f">พ้นระยะหยุดยาเนื้อ (คำนวณ)<input type="text" id="f_meat" readonly value="${esc(fd(caseMeat(c))||'–')}"></label>
       <label class="f">สถานะการรักษา<select id="f_outcome">${opts(LISTS.outcome,lastOutcome(c))}</select></label></div>
       <div id="wdHint" class="src" style="margin-top:6px"></div></fieldset>
     <div id="conflictBox"></div>
@@ -845,18 +954,7 @@ function viewCases(){
     <datalist id="cowList">${S.herd.slice(0,3000).map(r=>`<option value="${esc(r[0])}">`).join('')}</datalist>
     <datalist id="drugList">${S.drugs.map(d=>`<option value="${esc(d.name)}">`).join('')}</datalist>
   </form>
-  <section class="panel" style="display:grid;gap:12px"><div class="toolbar"><h3 style="margin:0">รายการเคส</h3><div class="row">
-    <label class="f" style="width:150px">ค้นหาเบอร์โค<input type="search" id="caseQ" value="${esc(UI.caseQ)}"></label>
-    <label class="f" style="width:145px">ตั้งแต่<input type="date" id="caseFrom" value="${esc(UI.caseFrom)}"></label>
-    <label class="f" style="width:145px">ถึง<input type="date" id="caseTo" value="${esc(UI.caseTo)}"></label>
-    <label class="f" style="width:130px">ประเภท<select id="caseType">${opts(LISTS.type,UI.caseType)}</select></label>
-    <label class="f" style="width:170px">ผลการรักษา<select id="caseOutcome"><option value="">ทั้งหมด</option>${LISTS.outcome.concat(['ยังไม่บันทึกผล']).map(o=>`<option${o===UI.caseOutcome?' selected':''}>${o}</option>`).join('')}</select></label></div></div>
-    <div class="row" style="align-items:center;gap:8px"><span class="src">เกณฑ์แยกเคสใหม่: ถ้าเต้าเดิมกลับมามีอาการภายใน</span><input type="number" class="adm" id="set_recur" min="1" max="60" value="${recurDays()}" style="width:70px" aria-label="จำนวนวัน"><span class="src">วันหลังหาย (หรือหลังวันพบอาการถ้ายังไม่บันทึกวันหาย) ให้บันทึกเป็นการติดตามอาการของเคสเดิม เกินกว่านั้นเป็นเคส Recurrent · AHDB ใช้ 7 วัน, Ruegg (UW–Madison) ใช้ 14 วัน</span></div>
-    <div id="caseStatus">${caseStatusHTML()}</div>
-    <div id="fuBoxActive"></div>
-    <details ${UI.fu&&UI.fu.ctx==='active'?'open':''}><summary class="src" style="cursor:pointer">รายการกำลังรักษาและระยะหยุดยา (กดปุ่ม "หายแล้ว" เพื่อปิดเคสโดยไม่ต้องเปิดฟอร์ม)</summary><div id="caseActive" style="margin-top:8px">${activeTableHTML()}</div></details>
-    <div class="tbl" style="max-height:60vh" id="caseTable">${caseTableHTML()}</div></section>
-  <details class="panel desk"><summary class="src" style="cursor:pointer">นำเข้า / ส่งออกไฟล์ Excel</summary><div style="margin-top:10px"><div class="row"><span class="btn file">นำเข้า Excel (CASE_ENTRY / TREATMENT)<input type="file" id="caseFile" accept=".xls,.xlsx"></span><button class="btn" id="caseExport">ส่งออก Excel ตามเทมเพลต</button></div></div></details>`;
+`;
 }
 const WDU_UNITS=[['d','วัน'],['h','ชั่วโมง'],['m','มื้อรีด']];
 /* label withdrawal -> whole days counted from the date of the last dose. Hours and milkings are rounded up and one day is added,
@@ -866,11 +964,11 @@ const wdText=(v,u)=>v==null||v===''?'':v+' '+((WDU_UNITS.find(x=>x[0]===(u||'d')
 function drugByName(n){n=String(n||'').trim().toLowerCase();return n?S.drugs.find(d=>String(d.name||'').trim().toLowerCase()===n)||null:null;}
 function doseText(d){if(!d)return '';if(d.dose!=null&&d.dose!=='')return d.dose+' mg/kg';return d.fixed||'';}
 function calcDosage(d,bw){if(!d)return '';if(d.dose!=null&&d.dose!==''&&d.conc){if(!bw)return '';return (Math.round(d.dose*bw/d.conc*10)/10)+' ml';}return d.fixed||'';}
-function trRow(t,i){t=t||{};const wd=t.wdDays;return `<tr data-i="${i}"><td><input type="date" data-k="start" value="${esc(t.start||'')}"></td><td><input type="text" data-k="drug" list="drugList" value="${esc(t.drug||'')}" style="min-width:160px" placeholder="เลือกจากฐานข้อมูลยา"></td><td><select data-k="route">${opts(LISTS.route,t.route)}</select></td><td><input type="text" data-k="dose" value="${esc(t.dose||'')}" style="width:110px"></td><td><input type="text" data-k="dosage" value="${esc(t.dosage||'')}" style="width:100px" ${t.dosageManual?'data-touched="1"':''}><div class="dosewarn"></div></td><td><input type="number" data-k="days" min="1" value="${t.days??''}" style="width:64px"></td><td data-wdcell class="num">${wdCell(t)}</td><td><input type="hidden" data-k="wdDays" value="${wd??''}"><input type="hidden" data-k="wdLabel" value="${esc(t.wdLabel||'')}"><input type="hidden" data-k="wdMeat" value="${t.wdMeat??''}"><button type="button" class="btn sm danger" data-deltr="${i}" aria-label="ลบแถว">ลบ</button></td></tr>`;}
-function wdCell(t){const w=t.wdDays;return (w==null||w===''?'<span class="pill bad">ไม่ทราบ</span>':esc(t.wdLabel&&!/วัน$/.test(t.wdLabel)?t.wdLabel+' → '+w+' วัน':w+' วัน'))+'<div class="src">เนื้อ '+(t.wdMeat==null||t.wdMeat===''?'?':t.wdMeat+' วัน')+'</div>';}
+function trRow(t,i){t=t||{};const wd=t.wdDays;return `<tr data-i="${i}"><td><input type="date" data-k="start" value="${esc(t.start||'')}"></td><td><input type="text" data-k="drug" list="drugList" value="${esc(t.drug||'')}" style="min-width:160px" placeholder="เลือกจากฐานข้อมูลยา"></td><td><select data-k="route">${opts(LISTS.route,t.route)}</select></td><td><input type="text" data-k="dose" value="${esc(t.dose||'')}" style="width:110px"></td><td><input type="text" data-k="dosage" value="${esc(t.dosage||'')}" style="width:100px" ${t.dosageManual?'data-touched="1"':''}><div class="dosewarn"></div></td><td><input type="number" data-k="days" min="1" value="${t.days??''}" style="width:64px"></td><td data-wdcell class="num">${wdCell(t)}</td><td><input type="hidden" data-k="wdDays" value="${wd??''}"><input type="hidden" data-k="wdLabel" value="${esc(t.wdLabel||'')}"><button type="button" class="btn sm danger" data-deltr="${i}" aria-label="ลบแถว">ลบ</button></td></tr>`;}
+function wdCell(t){const w=t.wdDays;return (w==null||w===''?'<span class="pill bad">ไม่ทราบ</span>':esc(t.wdLabel&&!/วัน$/.test(t.wdLabel)?t.wdLabel+' → '+w+' วัน':w+' วัน'));}
 function applyDrug(tr){const g=k=>tr.querySelector(`[data-k="${k}"]`);const d=drugByName(g('drug').value);if(!d)return;
-  const ed=effWdDays(d.wd,d.wdUnit);if(d.route)g('route').value=d.route;g('dose').value=doseText(d);g('wdDays').value=ed??'';g('wdLabel').value=wdText(d.wd,d.wdUnit);g('wdMeat').value=d.wdMeat??'';
-  tr.querySelector('[data-wdcell]').innerHTML=wdCell({wdDays:ed,wdLabel:wdText(d.wd,d.wdUnit),wdMeat:d.wdMeat});
+  const ed=effWdDays(d.wd,d.wdUnit);if(d.route)g('route').value=d.route;g('dose').value=doseText(d);g('wdDays').value=ed??'';g('wdLabel').value=wdText(d.wd,d.wdUnit);
+  tr.querySelector('[data-wdcell]').innerHTML=wdCell({wdDays:ed,wdLabel:wdText(d.wd,d.wdUnit)});
   g('dosage').dataset.touched='';g('dosage').value=calcDosage(d,num(($('#f_bw')||{}).value));if(!g('days').value)g('days').value=1;
   const o=$('#f_outcome');if(o&&!o.value)o.value='กำลังรักษา';}
 /* sanity checks: body weight outside 150–1000 kg, or a dosage typed by hand more than 25% away from Dose × weight ÷ concentration */
@@ -880,23 +978,22 @@ function checkDoses(){const bw=num(($('#f_bw')||{}).value);const bwn=$('#bwWarn'
     if(!isNaN(v)&&v>150&&/ml/i.test(tr.querySelector('[data-k="dosage"]').value))m=m||'ปริมาณมากผิดปกติ';
     w.innerHTML=m?'<span class="pill bad" style="font-size:11px">'+esc(m)+'</span>':'';});}
 function recalcDosages(){const bw=num(($('#f_bw')||{}).value);document.querySelectorAll('#trBody tr').forEach(tr=>{const ds=tr.querySelector('[data-k="dosage"]');if(ds.dataset.touched)return;const d=drugByName(tr.querySelector('[data-k="drug"]').value);if(d&&d.dose!=null&&d.dose!=='')ds.value=calcDosage(d,bw);});}
-function readTreatments(){return [...document.querySelectorAll('#trBody tr')].map(tr=>{const o={};tr.querySelectorAll('[data-k]').forEach(el=>{const k=el.dataset.k;o[k]=k==='days'||k==='wdDays'||k==='wdMeat'?num(el.value):el.value;});o.dosageManual=!!tr.querySelector('[data-k="dosage"]').dataset.touched;return o;}).filter(t=>t.drug);}
+function readTreatments(){return [...document.querySelectorAll('#trBody tr')].map(tr=>{const o={};tr.querySelectorAll('[data-k]').forEach(el=>{const k=el.dataset.k;o[k]=k==='days'||k==='wdDays'?num(el.value):el.value;});o.dosageManual=!!tr.querySelector('[data-k="dosage"]').dataset.touched;return o;}).filter(t=>t.drug);}
 /* withdrawal = last injection of the course (start + days − 1, latest across drugs) + the longest milk withdrawal among the drugs used */
-function treatSummary(trs){let last='',max=null,meat='';const missing=[],meatMissing=[];
+function treatSummary(trs){let last='',max=null;const missing=[];
   trs.forEach(t=>{if(!t.drug||!t.start)return;const end=addDays(t.start,Math.max(1,num(t.days)||1)-1);if(end>last)last=end;
-    if(t.wdDays==null||t.wdDays==='')missing.push(t.drug);else if(!max||+t.wdDays>max.d)max={d:+t.wdDays,drug:t.drug};
-    if(t.wdMeat==null||t.wdMeat==='')meatMissing.push(t.drug);else{const m=addDays(end,+t.wdMeat);if(m>meat)meat=m;}});
+    if(t.wdDays==null||t.wdDays==='')missing.push(t.drug);else if(!max||+t.wdDays>max.d)max={d:+t.wdDays,drug:t.drug};});
   /* a course with any drug of unknown withdrawal has no safe date: WDU keeps the cow on the withhold list */
-  return{last,max,missing,meatMissing,wd:last?(missing.length?WDU:max?addDays(last,max.d):''):'',meat:last?(meatMissing.length?WDU:meat):''};}
+  return{last,max,missing,wd:last?(missing.length?WDU:max?addDays(last,max.d):''):''};}
 function updateWd(){const el=$('#wdHint');if(!el)return;const ts=treatSummary(readTreatments());const f=$('#f_wd');
-  if(f&&!f.dataset.touched)f.value=ts.wd&&ts.wd!==WDU?ts.wd:'';const mt=$('#f_meat');if(mt)mt.value=ts.meat===WDU?'ยังไม่ทราบ':fd(ts.meat)||'–';
-  el.innerHTML=ts.last?`เข็มสุดท้าย ${fd(ts.last)}${ts.max?` · ระยะหยุดยานานที่สุด ${ts.max.d} วัน (${esc(ts.max.drug)}) → ผ่านยา <b>${fd(ts.wd)}</b>`:''}${ts.missing.length?` · <span class="pill bad">ยังไม่ทราบวันผ่านยา: ไม่มีระยะหยุดยานมของ ${esc(ts.missing.join(', '))} · โคจะอยู่ในรายการห้ามส่งนมจนกว่าจะใส่ระยะหยุดยาในฐานข้อมูลยา หรือกำหนดวันผ่านยาเอง</span>`:''}${ts.meatMissing.length?` · <span class="pill warn">ไม่มีระยะหยุดยาเนื้อของ ${esc(ts.meatMissing.join(', '))}</span>`:''}${(()=>{const cl=($('#f_clear')||{}).value;return cl&&ts.last&&cl<ts.last?` · <span class="pill warn">หายตะกอน (${fd(cl)}) ก่อนเข็มสุดท้ายของคอร์ส ถ้าหยุดยาตั้งแต่วันที่หาย ให้แก้ Days ของยาแต่ละตัว ระบบจะคำนวณวันผ่านยาใหม่</span>`:'';})()}${f&&f.dataset.touched?' · <span class="pill">กำหนดวันผ่านยาเอง</span> <button type="button" class="btn sm" id="wdAuto">คำนวณอัตโนมัติ</button>':''}`
+  if(f&&!f.dataset.touched)f.value=ts.wd&&ts.wd!==WDU?ts.wd:'';
+  el.innerHTML=ts.last?`เข็มสุดท้าย ${fd(ts.last)}${ts.max?` · ระยะหยุดยานานที่สุด ${ts.max.d} วัน (${esc(ts.max.drug)}) → ผ่านยา <b>${fd(ts.wd)}</b>`:''}${ts.missing.length?` · <span class="pill bad">ยังไม่ทราบวันผ่านยา: ไม่มีระยะหยุดยานมของ ${esc(ts.missing.join(', '))} · โคจะอยู่ในรายการห้ามส่งนมจนกว่าจะใส่ระยะหยุดยาในฐานข้อมูลยา หรือกำหนดวันผ่านยาเอง</span>`:''}${(()=>{const cl=($('#f_clear')||{}).value;return cl&&ts.last&&cl<ts.last?` · <span class="pill warn">หายตะกอน (${fd(cl)}) ก่อนเข็มสุดท้ายของคอร์ส ถ้าหยุดยาตั้งแต่วันที่หาย ให้แก้ Days ของยาแต่ละตัว ระบบจะคำนวณวันผ่านยาใหม่</span>`:'';})()}${f&&f.dataset.touched?' · <span class="pill">กำหนดวันผ่านยาเอง</span> <button type="button" class="btn sm" id="wdAuto">คำนวณอัตโนมัติ</button>':''}`
     :'กำหนดวันผ่านยา = วันที่ฉีดยาเข็มสุดท้าย + ระยะหยุดยาของตัวยาที่นานที่สุด';
-  const oc=($('#f_outcome')||{}).value,mt2=ts.meat;if(oc==='คัดทิ้ง'&&mt2&&(mt2===WDU||mt2>today()))el.innerHTML+=` · <span class="pill bad">คัดทิ้ง: ยังไม่พ้นระยะหยุดยาเนื้อ (${fd(mt2)}) ห้ามส่งขายเนื้อ</span>`;}
+}
 function drugsHTML(){const e=UI.drugEdit!=null?S.drugs[UI.drugEdit]||{}:{};
-  return `<div class="tbl"><table><thead><tr><th>ชื่อยา</th><th>ตัวยา</th><th class="num">ความเข้มข้น (mg/ml)</th><th class="num">Dose (mg/kg)</th><th>ขนาดคงที่ (ถ้าไม่คิดตามน้ำหนัก)</th><th>Route</th><th class="num">หยุดยานม</th><th class="num">หยุดยาเนื้อ (วัน)</th><th></th></tr></thead><tbody>
-  ${S.drugs.map((d,j)=>`<tr><td>${esc(d.name)}</td><td>${esc(d.active||'')}</td><td class="num">${fn(d.conc)}</td><td class="num">${fn(d.dose)}</td><td>${esc(d.fixed||'')}</td><td>${esc(d.route||'')}</td><td class="num">${d.wd==null||d.wd===''?'<span class="pill bad">ใส่ตามฉลาก</span>':esc(wdText(d.wd,d.wdUnit))+((d.wdUnit||'d')!=='d'?'<div class="src">นับ '+effWdDays(d.wd,d.wdUnit)+' วัน</div>':'')}</td><td class="num">${d.wdMeat==null||d.wdMeat===''?'<span class="pill warn">ใส่ตามฉลาก</span>':fn(d.wdMeat)}</td><td class="act"><button type="button" class="btn sm" data-editdrug="${j}">แก้ไข</button> <button type="button" class="btn sm danger" data-deldrug="${j}">ลบ</button></td></tr>`).join('')}
-  <tr><td><input type="text" id="dg_name" value="${esc(e.name||'')}" placeholder="ชื่อการค้า" style="min-width:130px"></td><td><input type="text" id="dg_active" value="${esc(e.active||'')}" style="min-width:120px"></td><td><input type="number" id="dg_conc" step="any" value="${e.conc??''}" style="width:90px"></td><td><input type="number" id="dg_dose" step="any" value="${e.dose??''}" style="width:80px"></td><td><input type="text" id="dg_fixed" value="${esc(e.fixed||'')}" placeholder="เช่น 1 หลอด/เต้า" style="width:130px"></td><td><select id="dg_route">${opts(LISTS.route,e.route||'')}</select></td><td style="white-space:nowrap"><input type="number" id="dg_wd" min="0" step="any" value="${e.wd??''}" style="width:64px"> <select id="dg_wdu" style="width:92px">${WDU_UNITS.map(([v,l])=>`<option value="${v}"${(e.wdUnit||'d')===v?' selected':''}>${l}</option>`).join('')}</select></td><td><input type="number" id="dg_wdm" min="0" value="${e.wdMeat??''}" style="width:64px"></td><td><button type="button" class="btn sm pri" id="dgSave">${UI.drugEdit!=null?'บันทึก':'เพิ่ม'}</button>${UI.drugEdit!=null?' <button type="button" class="btn sm" id="dgCancel">ยกเลิก</button>':''}</td></tr></tbody></table></div>
+  return `<div class="tbl"><table><thead><tr><th>ชื่อยา</th><th>ตัวยา</th><th class="num">ความเข้มข้น (mg/ml)</th><th class="num">Dose (mg/kg)</th><th>ขนาดคงที่ (ถ้าไม่คิดตามน้ำหนัก)</th><th>Route</th><th class="num">หยุดยานม</th><th></th></tr></thead><tbody>
+  ${S.drugs.map((d,j)=>`<tr><td>${esc(d.name)}</td><td>${esc(d.active||'')}</td><td class="num">${fn(d.conc)}</td><td class="num">${fn(d.dose)}</td><td>${esc(d.fixed||'')}</td><td>${esc(d.route||'')}</td><td class="num">${d.wd==null||d.wd===''?'<span class="pill bad">ใส่ตามฉลาก</span>':esc(wdText(d.wd,d.wdUnit))+((d.wdUnit||'d')!=='d'?'<div class="src">นับ '+effWdDays(d.wd,d.wdUnit)+' วัน</div>':'')}</td><td class="act"><button type="button" class="btn sm" data-editdrug="${j}">แก้ไข</button> <button type="button" class="btn sm danger" data-deldrug="${j}">ลบ</button></td></tr>`).join('')}
+  <tr><td><input type="text" id="dg_name" value="${esc(e.name||'')}" placeholder="ชื่อการค้า" style="min-width:130px"></td><td><input type="text" id="dg_active" value="${esc(e.active||'')}" style="min-width:120px"></td><td><input type="number" id="dg_conc" step="any" value="${e.conc??''}" style="width:90px"></td><td><input type="number" id="dg_dose" step="any" value="${e.dose??''}" style="width:80px"></td><td><input type="text" id="dg_fixed" value="${esc(e.fixed||'')}" placeholder="เช่น 1 หลอด/เต้า" style="width:130px"></td><td><select id="dg_route">${opts(LISTS.route,e.route||'')}</select></td><td style="white-space:nowrap"><input type="number" id="dg_wd" min="0" step="any" value="${e.wd??''}" style="width:64px"> <select id="dg_wdu" style="width:92px">${WDU_UNITS.map(([v,l])=>`<option value="${v}"${(e.wdUnit||'d')===v?' selected':''}>${l}</option>`).join('')}</select></td><td><button type="button" class="btn sm pri" id="dgSave">${UI.drugEdit!=null?'บันทึก':'เพิ่ม'}</button>${UI.drugEdit!=null?' <button type="button" class="btn sm" id="dgCancel">ยกเลิก</button>':''}</td></tr></tbody></table></div>
   ${S.drugs.length?'':'<div class="row" style="margin-top:8px"><button type="button" class="btn sm" id="dgStarter">เพิ่มรายการเริ่มต้นจากใบ Follow up</button><span class="src">ความเข้มข้นและ Dose คำนวณย้อนจากปริมาณยาและน้ำหนักตัวในใบ ต้องตรวจกับฉลากก่อนใช้</span></div>'}
   <p class="src" style="margin-top:6px">ฐานข้อมูลยาใช้ร่วมกันทุกคน · ระยะหยุดยานมใส่ตามฉลากของผลิตภัณฑ์ที่ฟาร์มใช้จริง (เลือกหน่วยตามฉลากได้: วัน / ชั่วโมง / มื้อรีด · ถ้าเป็นชั่วโมงหรือมื้อรีด ระบบปัดขึ้นเป็นวันแล้วบวกเพิ่ม 1 วัน เพราะไม่ได้บันทึกเวลาที่ฉีด เช่น 96 ชั่วโมง นับ 5 วัน · ยาที่ยังไม่มีระยะหยุดยา โคจะอยู่ในรายการห้ามส่งนมจนกว่าจะใส่ข้อมูล) · ยาที่ไม่คิดตามน้ำหนัก เช่น ยาอัดเต้า ให้เว้น Dose และใส่ขนาดคงที่แทน</p>`;}
 async function saveDrugs(items){try{await put('meta','drugs',{items});S.drugs=items;audit('update','meta','drugs','แก้ไขฐานข้อมูลยา ('+items.length+' รายการ)');await backfillWd();UI.drugEdit=null;const b=$('#drugBox');if(b)b.innerHTML=drugsHTML();const dl=$('#drugList');if(dl)dl.innerHTML=S.drugs.map(d=>`<option value="${esc(d.name)}">`).join('');toast('บันทึกฐานข้อมูลยาแล้ว');}catch(e){toast('บันทึกไม่สำเร็จ');}}
@@ -958,8 +1055,8 @@ function linkInfoHTML(c){const p=c.linkedCase?S.cases[c.linkedCase]:null;const c
 async function backfillWd(){let n=0;for(const c0 of Object.values(S.cases)){const tr=(c0.treatments||[]).filter(t=>t.drug);if(!tr.length)continue;const ts0=treatSummary(tr);if(ts0.last<addDays(today(),-90))continue;
     let ch=false;const c=JSON.parse(JSON.stringify(c0));(c.treatments||[]).forEach(t=>{const d=drugByName(t.drug);if(!d)return;
       if((t.wdDays==null||t.wdDays==='')&&d.wd!=null&&d.wd!==''){t.wdDays=effWdDays(d.wd,d.wdUnit);t.wdLabel=wdText(d.wd,d.wdUnit);ch=true;}
-      if((t.wdMeat==null||t.wdMeat==='')&&d.wdMeat!=null&&d.wdMeat!==''){t.wdMeat=d.wdMeat;ch=true;}});
-    if(!ch)continue;const ts=treatSummary(c.treatments.filter(t=>t.drug));if(!c.wdManual)c.withdrawDate=ts.wd===WDU?'':ts.wd;c.meatWd=ts.meat;c.updatedAt=new Date().toISOString().slice(0,19);await put('cases',c.caseNo,c);n++;}
+      });
+    if(!ch)continue;const ts=treatSummary(c.treatments.filter(t=>t.drug));if(!c.wdManual)c.withdrawDate=ts.wd===WDU?'':ts.wd;delete c.meatWd;c.updatedAt=new Date().toISOString().slice(0,19);await put('cases',c.caseNo,c);n++;}
   if(n)toast('อัปเดตวันผ่านยาของเคสที่ใช้ยานี้ '+n+' เคส');}
 function showConflict(fresh){const b=$('#conflictBox');if(!b)return;b.innerHTML=`<div class="note warn" style="display:grid;gap:8px"><b>เคสนี้ถูกแก้ไขโดยผู้อื่นเมื่อ ${esc(localTs(fresh.updatedAt))} หลังจากที่คุณเปิดฟอร์ม</b>
   <div>ถ้าบันทึกทับ ข้อมูลที่อีกคนเพิ่งแก้ (เช่น ยา ผลเพาะเชื้อ) จะถูกแทนที่ด้วยค่าที่อยู่ในฟอร์มนี้ · บันทึกติดตามอาการไม่หาย</div>
@@ -973,8 +1070,6 @@ function careText(c){const k=c.care||{},a=[];if(k.extraMilk)a.push('เพิ่
 function caseWdUnknown(c){if(c.wdManual)return false;const tr=(c.treatments||[]).filter(t=>t.drug);if(!tr.length||tr.some(t=>t.withdrawDate))return false;
   const ts=treatSummary(tr);return ts.wd===WDU&&ts.last>=addDays(today(),-60);}
 function caseWd(c){if(caseWdUnknown(c))return WDU;const w=c.withdrawDate&&c.withdrawDate!==WDU?c.withdrawDate:'';return w||(c.treatments||[]).map(t=>t.withdrawDate).filter(Boolean).sort().pop()||'';}
-function caseMeat(c){const ts=treatSummary((c.treatments||[]).filter(t=>t.drug));return ts.meat;}
-function cowMeat(cow){let w='';(casesByCow.get(norm(cow))||[]).forEach(c=>{const x=caseMeat(c);if(x>w)w=x;});return w;}
 function caseClear(c){return c.clearDate||(c.treatments||[]).map(t=>t.clearDate).filter(Boolean).sort().pop()||'';}
 /* milk withdrawal is per cow: the latest withdrawal date across all her cases that had started treatment by the given date */
 function cowWd(cow,asOf){let w='';(casesByCow.get(norm(cow))||[]).forEach(c=>{const first=(c.treatments||[]).map(t=>t.start).filter(Boolean).sort()[0];if(asOf&&(!first||first>asOf))return;const x=caseWd(c);if(x>w)w=x;});return w;}
@@ -998,7 +1093,7 @@ function caseTableHTML(){
   if(!S.ready.cases)return `<div class="empty">กำลังโหลดบันทึกเคส…</div>`;
   const q=norm(UI.caseQ);
   const list=caseList().filter(c=>(!q||norm(c.cow).includes(q))&&(!UI.caseFrom||(c.dateDetected||'')>=UI.caseFrom)&&(!UI.caseTo||(c.dateDetected||'')<=UI.caseTo)&&(!UI.caseType||c.type===UI.caseType)&&(!UI.caseOutcome||(UI.caseOutcome==='ยังไม่บันทึกผล'?!lastOutcome(c):lastOutcome(c)===UI.caseOutcome)));
-  if(!list.length)return `<div class="empty">ยังไม่มีเคสตามเงื่อนไข · กรอกฟอร์มด้านบนเพื่อบันทึกเคสแรก หรือนำเข้าไฟล์ Excel</div>`;
+  if(!list.length)return `<div class="empty">${q?`ไม่พบเคสของโค ${esc(UI.caseQ)} · <button type="button" class="btn sm pri" id="caseAdd2">+ เพิ่มเคสใหม่ของโค ${esc(UI.caseQ)}</button>`:'ยังไม่มีเคสตามเงื่อนไข · กด "+ เพิ่มเคสใหม่" เพื่อบันทึกเคสแรก'}</div>`;
   return `<table><thead><tr><th>Case No</th><th>วันที่พบ</th><th>โค</th><th class="num">ท้อง</th><th class="num">DIM</th><th>คอก</th><th>เต้า (CMT)</th><th>ประเภท</th><th>คะแนน</th><th>เพาะเชื้อ</th><th>ยา</th><th>ผล</th></tr></thead><tbody>${list.map(c=>`<tr class="click" data-case="${esc(c.caseNo)}"><td class="mono">${esc(c.caseNo)}</td><td>${fd(c.dateDetected)}</td><td class="mono">${esc(c.cow)}</td><td class="num">${fn(c.lact)}</td><td class="num">${fn(c.dim)}</td><td>${esc(c.barn)}</td><td>${esc(caseQuarters(c).map(x=>x.q+(x.cmt?' ('+x.cmt+')':'')).join(', ')||c.quarter)}</td><td>${c.type?`<span class="pill ${c.type==='New'?'':c.type==='Chronic'?'bad':'warn'}">${esc(c.type)}</span>`:''}</td><td>${c.score?`<span class="pill ${scoreClass(c.score)}">${esc(c.score)}</span>`:''}</td><td class="tw" style="max-width:240px">${esc(c.culture)}</td><td>${esc((c.treatments||[]).map(t=>t.drug).filter(Boolean).join(', '))}</td><td>${esc(lastOutcome(c))}</td></tr>`).join('')}</tbody></table><div class="pager" style="padding:8px 10px">${list.length} เคส</div>`;
 }
 function parseQ(s){s=String(s||'');if(/\b(LF|LH|RF|RH)\s*:/.test(s)){const m={};s.split(';').forEach(p=>{const a=p.match(/(LF|LH|RF|RH)\s*:\s*(.*)/);if(a)m[a[1]]=a[2].trim();});return{map:m};}return{all:s.trim()};}
@@ -1047,11 +1142,11 @@ function renderCowInfo(d){
     const sel=(k,list)=>`<select data-cf="${k}"><option value=""></option>${opts(list,d[k])}</select>`;
     const F=[['Lactation',inp('lact','number','min="0"')],['Last Calving Date',inp('calving','date')],['DIM (คำนวณ)',`<b id="cfDim">${d.dim??'–'}</b>`],['Reproductive Status',sel('repro',LISTS.repro)],['Milking Status',sel('milking',LISTS.milking)],['Last Breeding Date',inp('lastBreed','date')],['Days from Last Breeding (คำนวณ)',`<b id="cfDb">${d.daysBreed??'–'}</b>`],['Weekly Avg Yield (kg)',inp('yield','number','step="0.1"')]];
     el.innerHTML=`<div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr))">${F.map(([a,b])=>`<label class="f">${a}${b}</label>`).join('')}</div>
-     <div class="src" style="margin-top:8px">DIM = วันที่พบอาการ − วันคลอดล่าสุด (ตามค่าที่บันทึกไว้)</div>${penHTML(d)}${btns}`;return;}
+     <div class="src" style="margin-top:8px">DIM = วันที่พบอาการ − วันคลอดล่าสุด (ตามค่าที่บันทึกไว้)</div>${sccHTML()}${penHTML(d)}${btns}`;return;}
   const it=[['Lactation',d.lact],['Last Calving Date',fd(d.calving)],['DIM',d.dim],['Reproductive Status',d.repro],['Milking Status',d.milking],['Last Breeding Date',fd(d.lastBreed)],['Days from Last Breeding',d.daysBreed],['Weekly Avg Yield (kg)',d.yield]];
   el.innerHTML=`<dl>${it.map(([a,b])=>`<div><dt>${a}</dt><dd>${b==null||b===''?'–':esc(b)}</dd></div>`).join('')}</dl>
    <div class="src" style="margin-top:8px">${src} · DIM = วันที่พบอาการ − วันคลอดล่าสุด</div>
-   ${(d.notes||[]).map(([c,t])=>`<div class="note ${c}" style="margin-top:6px">${esc(t)}</div>`).join('')}${penHTML(d)}${btns}`;}
+   ${(d.notes||[]).map(([c,t])=>`<div class="note ${c}" style="margin-top:6px">${esc(t)}</div>`).join('')}${sccHTML()}${penHTML(d)}${btns}`;}
 function penOptions(){const set=new Set();const gi=S.herdCols.indexOf('Group');if(gi>=0)S.herd.forEach(r=>{if(r[gi])set.add(String(r[gi]));});
   Object.values(S.cases).forEach(c=>{if(c.barn)set.add(String(c.barn));if(c.group)set.add(String(c.group));});return [...set].sort((a,b)=>a.localeCompare(b,'th',{numeric:true}));}
 function penHTML(d){return `<div class="fgrid" style="margin-top:12px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
@@ -1075,7 +1170,7 @@ function readForm(){
   c.bw=num($('#f_bw').value);c.vetNote=$('#f_vet').value.trim();
   const oc=c.care||{};c.care={extraMilk:$('#care_extra').checked,strip:!!oc.strip&&!$('#care_extra').checked?oc.strip:false,stripHrs:oc.stripHrs??null,separate:$('#care_sep').checked,other:$('#care_oth').checked?$('#care_othtxt').value.trim():''};
   if(c.caseNo&&S.cases[c.caseNo])c.followups=S.cases[c.caseNo].followups||[];
-  c.treatments=readTreatments();c.clearDate=$('#f_clear').value||'';c.withdrawDate=$('#f_wd').value||'';c.wdManual=!!$('#f_wd').dataset.touched&&!!$('#f_wd').value;c.meatWd=caseMeat(c);c.outcome=$('#f_outcome').value;
+  c.treatments=readTreatments();c.clearDate=$('#f_clear').value||'';c.withdrawDate=$('#f_wd').value||'';c.wdManual=!!$('#f_wd').dataset.touched&&!!$('#f_wd').value;delete c.meatWd;c.outcome=$('#f_outcome').value;
   c.treatDate=(c.treatments[0]&&c.treatments[0].start)||c.treatDate||c.dateDetected;
   return c;
 }
@@ -1102,14 +1197,23 @@ function fillFromHerd(why){
   else UI.derived=snapFromCase(Object.assign({},ec,{dateDetected:det||ec.dateDetected}));
   renderCowInfo(UI.derived);updateAuto();renderCulPick();
 }
-function caseCultures(cow,det,caseNo){const txt=($('#f_culture')||{}).value||'';
-  return (culByCow.get(norm(cow))||[]).filter(isMastitisCul).filter(c=>(caseNo&&c.caseNo===caseNo)||(c.id&&(UI.pendingCul||[]).includes(c.id))||(c.lab&&txt.includes(String(c.lab)))||(det&&c.sent&&Math.abs(dDays(c.sent,det))<=14)).slice().reverse();}
-function culRowsHTML(list,ctx){return `<div class="tbl"><table><thead><tr><th>เลขจุล</th><th>วันที่ส่ง</th><th>เต้า</th><th>ชนิดเชื้อ</th><th>ความไวยา</th><th>รายงานผล</th><th></th></tr></thead><tbody>${list.map(c=>`<tr><td class="mono">${esc(c.lab||'–')}</td><td>${fd(c.sent)}</td><td>${esc(c.q||'')}</td><td class="tw">${c.org?esc(c.org):'<span class="pill warn">รอผล</span>'}${c._manual?' <span class="pill">ลงเอง</span>':c._edited?' <span class="pill">แก้ไขแล้ว</span>':''}</td><td>${sirChips(c.ab)}</td><td>${fd(c.rep)}</td><td class="act"><button type="button" class="btn sm" data-culedit="${esc(c.id||c.lab)}" data-ctx="${ctx}">${c.org?'แก้ไข':'ลงผล'}</button>${ctx==='case'?` <button type="button" class="btn sm" data-usecul="${esc(c.id||c.lab)}">ใช้ในสรุป</button>`:''}</td></tr>`).join('')}</tbody></table></div>`;}
+const culKey=c=>String(c.id||c.lab||'');
+/* explicit link choices on a case: culSel = chosen by the user, culOff = taken off the case; both override the automatic match */
+function culLinked(c,x,autoFn){const k=culKey(x);if((c.culOff||[]).includes(k))return false;if((c.culSel||[]).includes(k))return true;return autoFn(x);}
+function removeCulText(text,r){const keys=[r.lab,'ส่ง '+fds(r.sent)].filter(Boolean).map(String);
+  return String(text||'').split(' | ').map(x=>x.trim()).filter(Boolean).filter(x=>!keys.some(k=>x===k||x.startsWith(k+' ')||x.startsWith(k+':'))).join(' | ');}
+function caseCultures(cow,det,caseNo){const txt=($('#f_culture')||{}).value||'';const ec=UI.editCase||{};
+  return (culByCow.get(norm(cow))||[]).filter(isMastitisCul).filter(c=>culLinked(ec,c,c=>(caseNo&&c.caseNo===caseNo)||(c.id&&(UI.pendingCul||[]).includes(c.id))||(c.lab&&txt.includes(String(c.lab)))||(det&&c.sent&&Math.abs(dDays(c.sent,det))<=14))).slice().reverse();}
+function culRowsHTML(list,ctx){return `<div class="tbl"><table><thead><tr><th>เลขจุล</th><th>วันที่ส่ง</th><th>เต้า</th><th>ชนิดเชื้อ</th><th>ความไวยา</th><th>รายงานผล</th><th></th></tr></thead><tbody>${list.map(c=>`<tr><td class="mono">${esc(c.lab||'–')}</td><td>${fd(c.sent)}</td><td>${esc(c.q||'')}</td><td class="tw">${c.org?esc(c.org):'<span class="pill warn">รอผล</span>'}${c._manual?' <span class="pill">ลงเอง</span>':c._edited?' <span class="pill">แก้ไขแล้ว</span>':''}</td><td>${sirChips(c.ab)}</td><td>${fd(c.rep)}</td><td class="act"><button type="button" class="btn sm" data-culedit="${esc(c.id||c.lab)}" data-ctx="${ctx}">${c.org?'แก้ไข':'ลงผล'}</button>${ctx==='case'?` <button type="button" class="btn sm" data-usecul="${esc(c.id||c.lab)}">ใช้ในสรุป</button> <button type="button" class="btn sm" data-culoff="${esc(culKey(c))}">เอาออกจากเคส</button>${c._manual&&c.id?` <button type="button" class="btn sm danger" data-culdel="${esc(c.id)}">ลบ</button>`:''}`:ctx==='pick'?` <button type="button" class="btn sm pri" data-culsel="${esc(culKey(c))}">เชื่อมกับเคสนี้</button>`:''}</td></tr>`).join('')}</tbody></table></div>`;}
 function renderCulPick(){
   const el=$('#culPick');if(!el)return; const id=$('#f_cow').value.trim(); const det=$('#f_dateDetected').value;
   if(!id){el.innerHTML='';return;}
   const list=caseCultures(id,det,UI.editCase&&UI.editCase.caseNo);
-  el.innerHTML=list.length?`<div class="src" style="margin-bottom:4px">ผลเพาะเชื้อของโค ${esc(id)} ที่เกี่ยวกับเคสนี้ (ส่งภายใน 14 วันจากวันพบอาการ หรือบันทึกจากเคสนี้)</div>${culRowsHTML(list,'case')}`:'<span class="src">ยังไม่มีผลเพาะเชื้อของเคสนี้</span>';
+  const shown=new Set(list.map(culKey));const others=(culByCow.get(norm(id))||[]).filter(isMastitisCul).filter(c=>!shown.has(culKey(c))).slice().reverse();
+  const ec=UI.editCase||{};const changed=(ec.culOff||[]).length||(ec.culSel||[]).length;
+  el.innerHTML=(list.length?`<div class="src" style="margin-bottom:4px">ผลเพาะเชื้อของโค ${esc(id)} ที่เชื่อมกับเคสนี้ (ระบบจับคู่ผลที่ส่งภายใน 14 วันจากวันพบอาการ หรือเลือกเอง)</div>${culRowsHTML(list,'case')}`:'<span class="src">ยังไม่มีผลเพาะเชื้อที่เชื่อมกับเคสนี้</span>')
+    +`<div class="row" style="margin-top:6px">${others.length?`<button type="button" class="btn sm" id="culChoose">${UI.culChoose?'ซ่อนรายการ':'เลือกผลเพาะเชื้ออื่นของโคตัวนี้ ('+others.length+')'}</button>`:''}${changed?'<span class="pill warn">เปลี่ยนการเชื่อมผลเพาะเชื้อแล้ว กดบันทึกเคสเพื่อยืนยัน</span>':''}</div>`
+    +(UI.culChoose&&others.length?`<div style="margin-top:6px">${culRowsHTML(others,'pick')}</div>`:'');
 }
 function culEditHTML(r){const ab=r.ab||{};const qs=String(r.q||'').toUpperCase();
   const orgs=[...new Set(S.cultures.filter(isMastitisCul).map(c=>c.org).filter(o=>o&&o.length<60))].sort();
@@ -1147,7 +1251,7 @@ async function saveCulEdit(){const E=UI.culEdit;if(!E)return;const old=E.rec;
     if(E.ctx==='case')renderCulPick();else render();}
   catch(e){toast('บันทึกไม่สำเร็จ ('+(e.code||e.message)+')');}}
 function afterCases(){
-  const f=$('#caseForm'); if(!f)return;
+  const f=$('#caseForm'); if(!f){const q=$('#caseQ');if(q&&matchMedia('(hover:hover)').matches){q.focus();q.setSelectionRange(q.value.length,q.value.length);}return;}
   UI.baseVer=UI.editCase&&S.cases[UI.editCase.caseNo]?S.cases[UI.editCase.caseNo].updatedAt||'':'';UI.forceSave=false;
   UI.derived=null;UI.cowEdit=false;UI.culEdit=null;if(UI.fu&&UI.fu.ctx!=='active')UI.fu=null;UI.pendingCul=UI.editCase&&S.cases[UI.editCase.caseNo]?[]:(UI.pendingCul||[]); fillFromHerd();updateWd();checkDoses();
   ['f_type','f_score'].forEach(id=>$('#'+id).addEventListener('change',e=>{e.target.dataset.touched='1';e.target.dataset.user='1';}));
@@ -1246,7 +1350,7 @@ function viewRisk(){
   const r=UI.riskEdit||(UI.riskEdit={date:today(),barn:'',cows:null,bedding:'',moisture:null,temp:null,hum:null,thi:null,udder:null,leg:null,btscc:null});
   const n=(id,v,step,ph)=>`<input type="number" id="r_${id}" value="${v??''}" ${step?'step="'+step+'"':''} ${ph?'placeholder="'+ph+'"':''}>`;
   return `<section class="sec-h"><div><h2>ประเมินความเสี่ยงระดับฝูง</h2>
-    <p class="lead">บันทึกตามชีท HERD_RISK รายคอก ระบบคำนวณ THI จากอุณหภูมิและความชื้น และให้คะแนนความเสี่ยงแต่ละปัจจัยเทียบกับเกณฑ์อ้างอิง</p></div>
+    <p class="lead">ประเมินความเสี่ยงระดับฝูง บันทึกข้อมูลตามรอบประเมิน</p></div>
 </section>
   <div class="grid2">
   <form class="panel" id="riskForm" style="display:grid;gap:12px" autocomplete="off"><h3>${r._id?'แก้ไขการประเมิน':'การประเมินใหม่'}</h3>
@@ -1359,11 +1463,11 @@ function buildMsg(id,h,c,cu,cs){
   // cultures: latest result for this case; if none, the cow's latest earlier result; plus samples still pending
   L.push('','ผลเพาะเชื้อ');
   const cq=caseQuarters(c).map(x=>x.q);
-  const mine=x=>(x.caseNo&&x.caseNo===c.caseNo)||(!x.caseNo&&x.sent&&c.dateDetected&&Math.abs(dDays(x.sent,c.dateDetected))<=14);
+  const mine=x=>culLinked(c,x,x=>(x.caseNo&&x.caseNo===c.caseNo)||(!x.caseNo&&x.sent&&c.dateDetected&&Math.abs(dDays(x.sent,c.dateDetected))<=14));
   const all=(cu||[]).filter(x=>isMastitisCul(x)&&x.sent&&x.sent<=rd).sort((a2,b2)=>(a2.sent||'').localeCompare(b2.sent||''));
   const done=all.filter(x=>x.org);
   let res=done.filter(mine).pop(),old=false;
-  if(!res){res=done.filter(x=>!mine(x)&&x.sent<(c.dateDetected||'')).pop();old=!!res;}
+  if(!res){res=done.filter(x=>!mine(x)&&!(c.culOff||[]).includes(culKey(x))&&x.sent<(c.dateDetected||'')).pop();old=!!res;}
   const qNote=x=>{const xq=String(x.q||'').toUpperCase();if(!xq||/รวม|4T/.test(xq)||!cq.length)return '';const qs=LISTS.quarter.filter(q=>xq.includes(q));return qs.length&&!qs.some(q=>cq.includes(q))?` (หมายเหตุ: คนละเต้ากับเคสนี้ ซึ่งป่วยเต้า ${cq.join(', ')})`:'';};
   const pend=all.filter(x=>!x.org&&mine(x));
   if(!res&&!pend.length)L.push('- ไม่มี');
@@ -1376,7 +1480,7 @@ function buildMsg(id,h,c,cu,cs){
   const ct=careText(c);if(ct)L.push('- การดูแล: '+ct);
   const lastFu=(c.followups||[]).filter(f=>f.date&&f.date<=rd).sort((a,b)=>a.date.localeCompare(b.date)).pop();if(lastFu&&lastFu.decision)L.push('- การตัดสินใจล่าสุด: '+lastFu.decision);
   const cw=cowWd(c.cow,rd)||caseWd(c);const clr=caseClear(c)&&caseClear(c)<=rd?caseClear(c):'';let oc=lastOutcome(c);if(oc&&oc!=='กำลังรักษา'&&!clr&&!(lastFu&&FU_OUT[lastFu.decision]))oc='กำลังรักษา';
-  const st=[oc?'สถานะ '+oc:'',clr?'หายตะกอน '+dTH(clr):'',cw?(cw===WDU?'ห้ามส่งนม · ยังไม่ทราบวันผ่านยา (ยาบางตัวไม่มีระยะหยุดยา)':cw>rd?'ห้ามส่งนม ส่งได้ตั้งแต่ '+dTH(cw):'พ้นระยะหยุดยา ส่งนมได้ตั้งแต่ '+dTH(cw)):'',(()=>{const m=cowMeat(c.cow);return m&&(m===WDU||m>rd)?'ห้ามส่งขายเนื้อ'+(m===WDU?' (ยังไม่ทราบวันพ้นระยะ)':' ถึง '+dTH(m)):'';})()].filter(Boolean);
+  const st=[oc?'สถานะ '+oc:'',clr?'หายตะกอน '+dTH(clr):'',cw?(cw===WDU?'ห้ามส่งนม · ยังไม่ทราบวันผ่านยา (ยาบางตัวไม่มีระยะหยุดยา)':cw>rd?'ห้ามส่งนม ส่งได้ตั้งแต่ '+dTH(cw):'พ้นระยะหยุดยา ส่งนมได้ตั้งแต่ '+dTH(cw)):''].filter(Boolean);
   if(st.length)L.push('- '+st.join(' | '));
   L.push('','Vet note',c.vetNote?c.vetNote.split('\n').map(x=>'- '+x).join('\n'):'-');
   return L.join('\n');
@@ -1514,9 +1618,10 @@ function renderAlerts(){
     if(nt)a.push(['notreat','warn',`เคสใหม่ 14 วันล่าสุดที่ยังไม่บันทึกการรักษา ${nt} เคส`]);
     const wdt=[...new Set(cs.filter(c=>caseWd(c)===td&&cowWd(c.cow,td)===td).map(c=>c.cow))];
     if(wdt.length)a.push(['wd','acc',`ถึงวันผ่านยาวันนี้: ${wdt.slice(0,6).join(', ')}${wdt.length>6?' …':''}`]);}
-  if(S.ready.herd&&S.db&&!S.herd.length)a.unshift(['seed','warn','ยังไม่มีข้อมูลฝูงในเวอร์ชันทดลอง กดเพื่อโหลดข้อมูลฟาร์ม']);
+  if(S.ready.herd&&S.db&&!S.herd.length)a.unshift(['seed','warn','ยังไม่มีรายชื่อโค กดเพื่อนำเข้าไฟล์รายชื่อโค']);
+  if(S.canWrite&&!S.userLabel&&(S.mode==='pwa'?!!S.userEmail:!!S.peopleLoaded&&!!S.userId))a.unshift(['me','warn','ตั้งชื่อและบทบาทของคุณ เพื่อบันทึกว่าใครแก้ไข']);
   if(outbox().length)a.unshift(['outbox','warn',`ออฟไลน์: รอส่งข้อมูล ${outbox().length} รายการ`]);
-  dataFresh().forEach(x=>a.push(['fresh','warn',x.k==='herd'?'รายชื่อโคไม่ได้อัปเดตเกิน 3 วัน':x.k==='backup'?'ควรสำรองข้อมูล':'ยังไม่ได้นำเข้าผลเพาะเชื้อเดือนก่อน']));
+  dataFresh().forEach(x=>a.push(['fresh','warn',x.k==='herd'?'รายชื่อโคไม่ได้อัปเดตเกิน 3 วัน':x.k==='backup'?'ควรสำรองข้อมูล':x.k==='scc'?'ยังไม่ได้นำเข้าผล SCC เดือนก่อน':'ยังไม่ได้นำเข้าผลเพาะเชื้อเดือนก่อน']));
   const m=S.culMeta;if(m&&m.added>0&&m.importedAt&&m.importedAt>lsGet('culSeen'))a.push(['cul','acc',`ผลเพาะเชื้อใหม่ ${m.added} รายการ${m.matched?' · จับคู่เข้าเคสแล้ว '+m.matched:''}`]);
   el.innerHTML=a.map(([k,c,t])=>`<button type="button" class="${c}" data-alert="${k}">${esc(t)} ›</button>`).join('');
 }
@@ -1532,7 +1637,7 @@ async function autoMatchCultures(recs){
   const ups=new Map();
   recs.filter(isMastitisCul).forEach(cu=>{ if(!cu.sent||!cu.org||!cu.cow)return;
     const spec=LISTS.quarter.filter(q=>String(cu.q||'').toUpperCase().includes(q));let best=null,bd=99;
-    (casesByCow.get(norm(cu.cow))||[]).forEach(c=>{if(!c.dateDetected)return;const d=Math.abs(dDays(cu.sent,c.dateDetected));if(d>14)return;
+    (casesByCow.get(norm(cu.cow))||[]).forEach(c=>{if(!c.dateDetected)return;if((c.culOff||[]).includes(culKey(cu)))return;const d=Math.abs(dDays(cu.sent,c.dateDetected));if(d>14)return;
       const qs=caseQuarters(c).map(x=>x.q);if(spec.length&&qs.length&&!spec.some(q=>qs.includes(q)))return;if(d<bd){bd=d;best=c;}});
     if(!best)return;const cur=ups.get(best.caseNo)||JSON.parse(JSON.stringify(best));if((cur.culture||'').includes(cu.lab))return;
     cur.culture=cur.culture?cur.culture+' | '+culText(cu):culText(cu);ups.set(best.caseNo,cur);});
@@ -1619,7 +1724,7 @@ function quickFuInfo(){const el=$('#qfInfo');if(!el)return;const id=(UI.qfCow||'
     :`<div class="note warn">โค ${esc(id)} ไม่มีเคสที่เปิดอยู่ (กำลังรักษา หรือหายไม่เกิน ${recurDays()} วัน) ถ้ามีอาการใหม่ให้บันทึกเป็นเคสใหม่ <button type="button" class="btn sm" data-qmode="new">ไปบันทึกเคสใหม่</button></div>`;}
 function viewQuick(){if(UI.qmode==='fu')return viewQuickFu();const s=qState();const sel=Object.keys(s.q);
   const tg=(attr,val,on,label,cls='')=>`<button type="button" class="qb ${cls}" ${attr}="${esc(val)}" aria-pressed="${on?'true':'false'}">${label}</button>`;
-  return `<section><h2>บันทึกด่วน</h2><p class="lead">สำหรับพนักงานในคอก: บันทึกเบอร์โค เต้า อาการ และ CMT ด้วยปุ่มใหญ่ สัตวแพทย์เติมการรักษาภายหลังในโมดูล 2</p></section>${quickModeBar()}
+  return `<section><h2>บันทึกด่วน</h2><p class="lead">สำหรับเพิ่มข้อมูลโคป่วยเบื้องต้น <b>** จำเป็นต้องเพิ่มข้อมูลให้ครบในหน้าบันทึกโคป่วย โดยใช้เบอร์โคค้นหาที่รายการเคส</b></p></section>${quickModeBar()}
   <div class="panel qk">
     <label class="f qlbl">เบอร์โค<input type="text" id="qkCow" list="cowListQ" value="${esc(s.cow)}" inputmode="text" autocomplete="off"></label>
     <datalist id="cowListQ">${S.herd.map(r=>`<option value="${esc(r[0])}">`).join('')}</datalist>
@@ -1821,7 +1926,7 @@ function memberTableHTML(){
   const list=(S.members||[]).slice().sort((a,b)=>a.email.localeCompare(b.email));
   if(!list.length)return '<div class="empty">กำลังโหลดรายชื่อผู้ใช้…</div>';
   return `<table><thead><tr><th>อีเมล</th><th>ชื่อ</th><th>บทบาท</th><th>เพิ่มเมื่อ</th><th></th></tr></thead><tbody>${list.map(m=>{const self=m.email===S.userEmail;
-    return `<tr><td class="mono">${esc(m.email)}${self?' <span class="pill acc">คุณ</span>':''}</td><td>${esc(m.name||'')}</td><td><select data-setrole="${esc(m.email)}" aria-label="บทบาทของ ${esc(m.email)}" ${self?'disabled':''}>${ROLES.map(([v,l])=>`<option value="${v}"${m.role===v?' selected':''}>${l}</option>`).join('')}${ROLES.some(x=>x[0]===m.role)?'':`<option selected>${esc(m.role||'')}</option>`}</select></td><td>${esc((m.addedAt||'').slice(0,10))}</td><td class="act">${self?'':`<button type="button" class="btn sm danger" data-delmember="${esc(m.email)}">ถอนสิทธิ์</button>`}</td></tr>`;}).join('')}</tbody></table>`;
+    return `<tr><td class="mono">${esc(m.email)}${self?' <span class="pill acc">คุณ</span>':''}</td><td><input type="text" data-setname="${esc(m.email)}" value="${esc(m.name||'')}" placeholder="เช่น ออย" maxlength="30" style="width:110px" aria-label="ชื่อของ ${esc(m.email)}"> <span class="src">${esc(personLabel(m.name,m.role))}</span></td><td><select data-setrole="${esc(m.email)}" aria-label="บทบาทของ ${esc(m.email)}" ${self?'disabled':''}>${ROLES.map(([v,l])=>`<option value="${v}"${m.role===v?' selected':''}>${l}</option>`).join('')}${ROLES.some(x=>x[0]===m.role)?'':`<option selected>${esc(m.role||'')}</option>`}</select></td><td>${esc((m.addedAt||'').slice(0,10))}</td><td class="act">${self?'':`<button type="button" class="btn sm danger" data-delmember="${esc(m.email)}">ถอนสิทธิ์</button>`}</td></tr>`;}).join('')}</tbody></table>`;
 }
 function viewUsers(){
   if(S.role!=='admin')return `<div class="panel empty">หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</div>`;
@@ -1979,8 +2084,12 @@ document.addEventListener('input',e=>{
   if(t.closest&&t.closest('#riskForm')){if(t.dataset.hs){const k=t.dataset.hs;const v=[1,2,3,4].map(s=>num(document.querySelector(`[data-hs="${k}"][data-s="${s}"]`).value)||0);const tot=v.reduce((a,b)=>a+b,0);if(tot)$('#r_'+k).value=Math.round(100*(v[2]+v[3])/tot);}riskPreview();}
 });
 let _db;function debounce(f){clearTimeout(_db);_db=setTimeout(f,250);}
+document.addEventListener('input',e=>{if(e.target.id==='me_name'||e.target.id==='me_role'){const pv=$('#me_prev');if(pv)pv.textContent=personLabel($('#me_name').value,$('#me_role').value);}});
 document.addEventListener('change',async e=>{
+  if(e.target.dataset&&e.target.dataset.sccdate!=null&&UI.sccPrev){UI.sccPrev.sheets[+e.target.dataset.sccdate].date=e.target.value;render();return;}
+  if(e.target.id==='sccQ'){UI.sccQ=e.target.value;render();return;}
   const t=e.target;
+  if(t.dataset&&t.dataset.setname){try{await S.db.collection('members').doc(t.dataset.setname).update({name:t.value.trim()});if(t.dataset.setname===S.userEmail)setMe(Object.assign({},S.me||{},{name:t.value.trim(),role:S.role}));toast('บันทึกชื่อแล้ว');}catch(err){toast('บันทึกชื่อไม่สำเร็จ ('+err.code+')');}}
   if(t.dataset&&t.dataset.setrole){try{await S.db.collection('members').doc(t.dataset.setrole).update({role:t.value});toast('เปลี่ยนบทบาทแล้ว');}catch(err){toast('เปลี่ยนบทบาทไม่สำเร็จ ('+err.code+')');}}
   if(t.id==='dailyDate'&&t.value){UI.dailyDate=t.value;render();}
   if(t.name==='herdSub'){UI.herdSub=t.value;render();}
@@ -2003,7 +2112,7 @@ document.addEventListener('change',async e=>{
   if(t.id==='r_barn'){const n=barnCows(t.value);if(n&&!$('#r_cows').value)$('#r_cows').value=n;riskPreview();}
   if(t.closest&&t.closest('#riskForm'))riskPreview();
   if(t.type==='file'&&t.files&&t.files[0]){const f=t.files[0];t.value='';
-    try{ if(t.id==='herdFile')await importHerd(f); else if(t.id==='culFile')await importCultures(f,false); else if(t.id==='drugFile')await importDrugs(f); else if(t.id==='restoreFile')await readRestore(f); else if(t.id==='caseFile')await importCases(f); else if(t.id==='riskFile')await importRisk(f);}
+    try{ if(t.id==='herdFile')await importHerd(f); else if(t.id==='culFile')await importCultures(f,false); else if(t.id==='sccFile')await readScc(f); else if(t.id==='drugFile')await importDrugs(f); else if(t.id==='restoreFile')await readRestore(f); else if(t.id==='caseFile')await importCases(f); else if(t.id==='riskFile')await importRisk(f);}
     catch(err){toast('นำเข้าไม่สำเร็จ: '+(err.message||err.code||err));}}
 });
 document.addEventListener('submit',e=>{e.preventDefault();
@@ -2026,10 +2135,14 @@ document.addEventListener('click',async e=>{
   if(t.dataset.delmemberok){try{await S.db.collection('members').doc(t.dataset.delmemberok).delete();toast('ถอนสิทธิ์ '+t.dataset.delmemberok+' แล้ว');}catch(err){toast('ถอนสิทธิ์ไม่สำเร็จ ('+err.code+')');}return;}
   if(t.dataset.dl){const [k,f]=t.dataset.dl.split('|');t.disabled=true;try{await downloadReport(k,f);}catch(err){console.error(err);toast('สร้างไฟล์ไม่สำเร็จ ('+(err.message||err)+')');}t.disabled=false;return;}
   if(t.id==='verBadge'){toggleVerPanel();return;}
+  if(t.id==='meBtn'){toggleMe();return;}
+  if(t.id==='meSave'){await saveMe();return;}
+  if(t.id==='meClose'){toggleMe(false);return;}
   if(t.id==='verClose'){toggleVerPanel();return;}
   if(t.dataset.untrash){const k=t.dataset.untrash,x=(S.trash||{})[k];if(x){await put(x.coll,x.id,x.data);await del('trash',k);await audit('restore',x.coll,x.id,'กู้คืน '+(x.label||x.id)+' จากถังขยะ');if(x.coll==='cases')setTimeout(()=>recomputeTypes(x.data.cow),1500);toast('กู้คืนแล้ว');render();}return;}
   if(t.dataset.purge){const k=t.dataset.purge;await del('trash',k);toast('ลบถาวรแล้ว');render();return;}
   if(t.dataset.herdsub){UI.herdSub=t.dataset.herdsub;render();return;}
+  if(t.dataset.delscc){await delScc(t.dataset.delscc);return;}
   if(t.dataset.opencase){const c=S.cases[t.dataset.opencase];if(c){UI.editCase=JSON.parse(JSON.stringify(c));UI.fu=null;location.hash='cases';render();window.scrollTo(0,0);}return;}
   if(t.dataset.fuadd){UI.fu={caseNo:t.dataset.fuadd,ctx:t.dataset.ctx||'active'};if(UI.fu.ctx==='active'){const d=$('#fuBoxActive');if(d)d.closest('section').querySelector('details').open=true;}showFu();return;}
   if(t.dataset.fuedit){const [cn,i]=t.dataset.fuedit.split('|');UI.fu={caseNo:cn,idx:+i,ctx:t.dataset.ctx||'form'};showFu();return;}
@@ -2040,15 +2153,22 @@ document.addEventListener('click',async e=>{
   if(t.dataset.editdrug!=null){UI.drugEdit=+t.dataset.editdrug;$('#drugBox').innerHTML=drugsHTML();$('#dg_name').focus();return;}
   if(t.dataset.culedit!=null){const key=t.dataset.culedit;const r=S.cultures.find(x=>(x.id&&x.id===key)||String(x.lab)===key);if(r){UI.culEdit={rec:JSON.parse(JSON.stringify(r)),ctx:t.dataset.ctx||'module'};showCulEdit();}return;}
   if(t.dataset.alert==='outbox'){flushOutbox();return;}
-  if(t.dataset.alert==='fresh'){location.hash='herd';return;}
+  if(t.dataset.alert==='fresh'){const f=dataFresh()[0];if(f&&['cul','scc','backup','herd'].includes(f.k))UI.herdSub=f.k;location.hash='herd';render();return;}
+  if(t.dataset.alert==='me'){toggleMe(true);window.scrollTo(0,0);return;}
   if(t.dataset.alert==='seed'){UI.herdSub='herd';location.hash='herd';return;}
-  if(t.dataset.alert){const a=t.dataset.alert;if(a==='stale'||a==='notreat'){UI.caseOutcome=a==='stale'?'กำลังรักษา':'ยังไม่บันทึกผล';UI.caseFrom=a==='notreat'?addDays(today(),-14):'';location.hash='cases';render();}else if(a==='wd'){location.hash='summary';}else if(a==='cul'){UI.herdSub='cul';location.hash='herd';render();}return;}
+  if(t.dataset.alert){const a=t.dataset.alert;if(a==='stale'||a==='notreat'){UI.editCase=null;UI.caseOutcome=a==='stale'?'กำลังรักษา':'ยังไม่บันทึกผล';UI.caseFrom=a==='notreat'?addDays(today(),-14):'';location.hash='cases';render();}else if(a==='wd'){location.hash='summary';}else if(a==='cul'){UI.herdSub='cul';location.hash='herd';render();}return;}
   if(quickClick(t))return;
   if(t.tagName==='TR'&&t.dataset.cow){UI.cowQ=t.dataset.cow;UI.cowCase='';location.hash='daily';return;}
-  if(t.tagName==='TR'&&t.dataset.case){UI.editCase=JSON.parse(JSON.stringify(S.cases[t.dataset.case]));if(!UI.editCase.treatments||!UI.editCase.treatments.length)UI.editCase.treatments=[blankCase().treatments[0]];if(route()!=='cases')location.hash='cases';else render();window.scrollTo({top:0,behavior:'smooth'});return;}
+  if(t.tagName==='TR'&&t.dataset.case){UI.editCase=JSON.parse(JSON.stringify(S.cases[t.dataset.case]));if(!UI.editCase.treatments)UI.editCase.treatments=[];if(route()!=='cases')location.hash='cases';else render();window.scrollTo({top:0,behavior:'smooth'});return;}
   if(t.tagName==='TR'&&t.dataset.risk){UI.riskEdit=Object.assign({_id:t.dataset.risk},S.risk[t.dataset.risk]);render();window.scrollTo({top:0,behavior:'smooth'});return;}
   if(t.dataset.gocow2){UI.cowQ=t.dataset.gocow2;UI.cowCase='';if(route()==='daily'){afterCow();const o=$('#cowOut');if(o)o.scrollIntoView({block:'start'});}else location.hash='daily';return;}
   if(t.dataset.gocow){UI.cowQ=t.dataset.gocow;UI.cowCase='';render();return;}
+  if(t.dataset.culoff){const k=t.dataset.culoff,ec=UI.editCase=UI.editCase||blankCase();ec.culOff=[...new Set((ec.culOff||[]).concat([k]))];ec.culSel=(ec.culSel||[]).filter(x=>x!==k);UI.pendingCul=(UI.pendingCul||[]).filter(x=>x!==k);
+    const r=S.cultures.find(x=>culKey(x)===k);if(r&&$('#f_culture'))$('#f_culture').value=removeCulText($('#f_culture').value,r);renderCulPick();toast('เอาผลเพาะเชื้อออกจากเคสแล้ว กดบันทึกเคสเพื่อยืนยัน');return;}
+  if(t.dataset.culsel){const k=t.dataset.culsel,ec=UI.editCase=UI.editCase||blankCase();ec.culSel=[...new Set((ec.culSel||[]).concat([k]))];ec.culOff=(ec.culOff||[]).filter(x=>x!==k);
+    const r=S.cultures.find(x=>culKey(x)===k);if(r&&r.org&&$('#f_culture'))$('#f_culture').value=mergeCulText($('#f_culture').value,r,null);UI.culChoose=false;renderCulPick();toast('เชื่อมผลเพาะเชื้อกับเคสแล้ว กดบันทึกเคสเพื่อยืนยัน');return;}
+  if(t.dataset.culdel){const id=t.dataset.culdel;if(!confirmOnce('culdel'+id,'กดอีกครั้งเพื่อยืนยันการลบผลเพาะเชื้อที่ลงเอง'))return;const r=S.culx[id];await softDel('culx',id,'ผลเพาะเชื้อ โค '+(r&&r.cow||'')+' '+(r&&r.q||''));
+    UI.pendingCul=(UI.pendingCul||[]).filter(x=>x!==id);if(r&&$('#f_culture'))$('#f_culture').value=removeCulText($('#f_culture').value,r);renderCulPick();toast('ลบแล้ว (กู้คืนได้จากถังขยะ)');return;}
   if(t.dataset.usecul){const k=t.dataset.usecul;const c=S.cultures.find(x=>(x.id&&x.id===k)||String(x.lab)===k);if(c){$('#f_culture').value=mergeCulText($('#f_culture').value,c,null);}return;}
   if(t.dataset.deltr!=null){t.closest('tr').remove();updateWd();return;}
   switch(t.id){
@@ -2065,12 +2185,13 @@ document.addEventListener('click',async e=>{
     case 'cowRefresh':UI.cowEdit=false;fillFromHerd('refresh');break;
     case 'qAll':document.querySelectorAll('input[name="q"]').forEach(x=>x.checked=true);syncQuarters();break;
     case 'qNone':document.querySelectorAll('input[name="q"]').forEach(x=>x.checked=false);syncQuarters();break;
-    case 'dgSave':{const v=id=>$('#'+id).value.trim();const it={name:v('dg_name'),active:v('dg_active'),conc:num(v('dg_conc')),dose:num(v('dg_dose')),fixed:v('dg_fixed'),route:v('dg_route'),wd:num(v('dg_wd')),wdUnit:v('dg_wdu')||'d',wdMeat:num(v('dg_wdm'))};
+    case 'dgSave':{const v=id=>$('#'+id).value.trim();const it={name:v('dg_name'),active:v('dg_active'),conc:num(v('dg_conc')),dose:num(v('dg_dose')),fixed:v('dg_fixed'),route:v('dg_route'),wd:num(v('dg_wd')),wdUnit:v('dg_wdu')||'d'};
       if(!it.name){toast('กรุณาใส่ชื่อยา');break;}if(it.dose!=null&&!it.conc){toast('ยาที่คิดตามน้ำหนักต้องใส่ความเข้มข้น (mg/ml)');break;}
       const items=S.drugs.slice();if(UI.drugEdit!=null)items[UI.drugEdit]=it;else{if(items.some(d=>d.name.toLowerCase()===it.name.toLowerCase())){toast('มียาชื่อนี้แล้ว');break;}items.push(it);}await saveDrugs(items);break;}
     case 'dgCancel':UI.drugEdit=null;$('#drugBox').innerHTML=drugsHTML();break;
     case 'dgStarter':await saveDrugs(STARTER_DRUGS.slice());break;
     case 'wdAuto':{const f=$('#f_wd');f.dataset.touched='';f.value='';updateWd();break;}
+    case 'culChoose':UI.culChoose=!UI.culChoose;renderCulPick();break;
     case 'culAdd':{const c=UI.editCase||{};const cow=$('#f_cow').value.trim();if(!cow){toast('ใส่เบอร์โคก่อน');break;}
       UI.culEdit={rec:{cow,sent:$('#f_dateDetected').value||today(),q:readQDetail().map(x=>x.q).join(','),sample:'น้ำนม',test:'เพาะเชื้อทดสอบความไวยา',clin:1,sub:0,ab:{},org:'',lab:'',rep:''},ctx:'case'};showCulEdit();break;}
     case 'culNew':UI.culEdit={rec:{cow:'',sent:today(),q:'',sample:'น้ำนม',test:'เพาะเชื้อทดสอบความไวยา',clin:1,sub:0,ab:{},org:'',lab:'',rep:''},ctx:'module'};showCulEdit();break;
@@ -2083,6 +2204,9 @@ document.addEventListener('click',async e=>{
     case 'cfForce':UI.forceSave=true;$('#conflictBox').innerHTML='';await saveCase();break;
     case 'dlFont':{for(const f of ['THSarabunNew.ttf','THSarabunNew-Bold.ttf']){const r=await fetch(f);await saveBytes(f,new Uint8Array(await r.arrayBuffer()));}break;}
     case 'doBackup':await doBackup();break;
+    case 'sccSave':await saveScc();break;
+    case 'sccCancel':UI.sccPrev=null;render();break;
+    case 'sccReportClose':UI.sccReport=null;render();break;
     case 'doRestore':await doRestore();break;
     case 'cancelRestore':UI.restore=null;render();break;
     case 'undoHerd':await undoGen('herd');break;
@@ -2103,7 +2227,9 @@ document.addEventListener('click',async e=>{
     case 'showOngoing':UI.caseOutcome='กำลังรักษา';{const s=$('#caseOutcome');if(s)s.value=UI.caseOutcome;}partialRefresh('cases');break;
     case 'clearOutcome':UI.caseOutcome='';{const s=$('#caseOutcome');if(s)s.value='';}partialRefresh('cases');break;
     case 'addTr':{const tb=$('#trBody');const last=[...tb.querySelectorAll('tr')].pop();const d=last?last.querySelector('[data-k="start"]').value:today();tb.insertAdjacentHTML('beforeend',trRow({start:d||$('#f_dateDetected').value||today(),days:null},tb.children.length));break;}
-    case 'newCase':UI.editCase=null;render();break;
+    case 'newCase':UI.editCase=blankCase();render();break;
+    case 'caseBack':UI.editCase=null;render();break;
+    case 'caseAdd':case 'caseAdd2':{const c=blankCase();const q=(UI.caseQ||'').trim();if(q)c.cow=q;UI.editCase=c;render();window.scrollTo(0,0);break;}
     case 'delCase':$('#delWrap').innerHTML=`<span class="confirm">ลบเคส ${esc(UI.editCase.caseNo)} ถาวร? <button type="button" class="btn danger" id="delYes">ยืนยันลบ</button><button type="button" class="btn" id="delNo">ยกเลิก</button></span>`;break;
     case 'delNo':$('#delWrap').innerHTML=`<button type="button" class="btn danger" id="delCase">ลบเคสนี้</button>`;break;
     case 'delYes':try{const c=UI.editCase;await softDel('cases',c.caseNo,`เคส ${c.caseNo} โค ${c.cow}`);setTimeout(()=>recomputeTypes(c.cow),1500);toast('ลบเคสแล้ว · กู้คืนได้จากหน้าฐานข้อมูล > สำรอง/กู้คืน');UI.editCase=null;render();}catch(err){toast('ลบไม่สำเร็จ');}break;
