@@ -1,6 +1,6 @@
 /* Service worker: keeps the app shell and libraries on the phone so the app opens without signal.
    Firestore and sign-in traffic are never intercepted; Firestore keeps its own offline cache. */
-const VERSION = 'mha-v9';
+const VERSION = 'mha-v11';
 const SHELL = ['./', './index.html', './firebase-config.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 const LIBS = [
