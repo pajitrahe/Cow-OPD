@@ -1,8 +1,9 @@
 /* Service worker: keeps the app shell and libraries on the phone so the app opens without signal.
    Firestore and sign-in traffic are never intercepted; Firestore keeps its own offline cache. */
-const VERSION = 'mha-v11';
+const VERSION = 'mha-v20';
 const SHELL = ['./', './index.html', './firebase-config.js', './manifest.webmanifest',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
+  './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
+  './THSarabunNew.ttf', './THSarabunNew-Bold.ttf'];
 const LIBS = [
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
