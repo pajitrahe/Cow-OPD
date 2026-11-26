@@ -7,8 +7,8 @@
 <meta name="description" content="บันทึกและสรุปข้อมูลโคเต้านมอักเสบ One Stop Dairy Farm">
 <meta name="theme-color" content="#6a3fb5">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/cowopd-192.png">
+<link rel="apple-touch-icon" href="icons/cowopd-apple.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -253,7 +253,7 @@ details.fs{border:1px solid var(--line);border-radius:var(--r);padding:10px 14px
 
 
 <header class="top"><div class="wrap">
-  <h1><img class="applogo" src="icons/icon-192.png" alt="" width="40" height="40"><span class="apptitle">Cow Treatment Records</span> <button type="button" id="verBadge" class="verb" aria-haspopup="true" aria-expanded="false">เวอร์ชัน</button><small>บันทึกการรักษาโคป่วย เต้านมอักเสบและโรคอื่นๆ · One Stop Dairy Farm</small></h1>
+  <h1><img class="applogo" src="icons/cowopd-192.png" alt="" width="40" height="40"><span class="apptitle">Cow Treatment Records</span> <button type="button" id="verBadge" class="verb" aria-haspopup="true" aria-expanded="false">เวอร์ชัน</button><small>บันทึกการรักษาโคป่วย เต้านมอักเสบและโรคอื่นๆ · One Stop Dairy Farm</small></h1>
   <div style="display:grid;gap:4px;justify-items:end"><div class="userbox" id="userBox"></div><div class="sync" id="sync"><span>กำลังเชื่อมต่อฐานข้อมูล…</span></div></div>
 </div></header>
 <div class="wrap" id="verPanel" hidden></div><div class="wrap" id="mePanel" hidden></div>
@@ -271,7 +271,7 @@ details.fs{border:1px solid var(--line);border-radius:var(--r);padding:10px 14px
 
 <div class="gate" id="gate">
   <form class="card" id="loginForm" autocomplete="on">
-    <img class="logo" src="icons/icon-192.png" alt="">
+    <img class="logo" src="icons/cowopd-192.png" alt="">
     <div><h2 style="margin:0">Cow Treatment Records</h2><p class="lead" style="margin-top:4px">One Stop Dairy Farm · เข้าสู่ระบบเพื่อบันทึกข้อมูล</p></div>
     <div id="gateMsg" class="note" hidden></div>
     <div id="loginFields" style="display:grid;gap:12px">
@@ -492,8 +492,9 @@ let renderQueued=false;
 function queueRender(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;rebuild();render(true);});}
 
 /* ============ version badge ============ */
-const APP_VER='3.0.2',APP_DATE='2026-11-26';
+const APP_VER='3.0.3',APP_DATE='2026-11-26';
 const CHANGELOG=[
+ ['3.0.3','2026-11-26',['เปลี่ยนชื่อไฟล์โลโก้ COW OPD ให้เครื่องที่ยังจำโลโก้เดิมไว้โหลดโลโก้ใหม่']],
  ['3.0.2','2026-11-26',['บันทึกการรักษา: พิมพ์ชื่อยาที่ยังไม่มีในฐานข้อมูลแล้วกด เพิ่มยาตัวใหม่ ยาจะถูกเก็บในฐานข้อมูลยาพร้อมป้าย ยาเพิ่มเองรอเช็คข้อมูล (แก้ไขแล้วบันทึกที่หน้าฐานข้อมูลยา ป้ายจะหายไป)']],
  ['3.0.1','2026-11-26',['นำเข้าฐานข้อมูลยา: ยาที่ยังไม่ทราบขนาดยานำเข้าได้ (ใส่ขนาดยาเองตอนบันทึกการรักษา) · ยาชื่อเดิมอัปเดตเฉพาะช่องที่กรอก ช่องว่างไม่ลบค่าเดิม']],
  ['3.0','2026-11-25',['เปลี่ยนเป็น Cow Treatment Records: บันทึกการรักษาโคป่วยทั้งเต้านมอักเสบและโรคอื่นๆ ในแอปเดียว',

@@ -1,8 +1,8 @@
 /* Service worker: keeps the app shell and libraries on the phone so the app opens without signal.
    Firestore and sign-in traffic are never intercepted; Firestore keeps its own offline cache. */
-const VERSION = 'ctr-v302';
+const VERSION = 'ctr-v303';
 const SHELL = ['./', './index.html', './firebase-config.js', './manifest.webmanifest',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
+  './icons/cowopd-192.png', './icons/cowopd-512.png', './icons/cowopd-apple.png',
   './THSarabunNew.ttf', './THSarabunNew-Bold.ttf'];
 const LIBS = [
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
@@ -11,7 +11,7 @@ const LIBS = [
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js'
 ];
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL).then(() => Promise.all(LIBS.map(u => c.add(u).catch(() => null))))));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' }))).then(() => Promise.all(LIBS.map(u => c.add(u).catch(() => null))))));
   self.skipWaiting();
 });
 self.addEventListener('activate', e => {
