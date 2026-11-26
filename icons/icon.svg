@@ -1,23 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><rect width="512" height="512" rx="112" fill="#6a3fb5"/><g transform=""><g transform="translate(48 -12) scale(0.78)"><g transform="translate(-6 0)">
- <path d="M150 150 C140 120 120 104 100 100 C112 120 124 138 136 156 Z" fill="#efe4c8"/>
- <path d="M250 150 C260 120 280 104 300 100 C288 120 276 138 264 156 Z" fill="#efe4c8"/>
- <ellipse cx="88" cy="196" rx="50" ry="24" transform="rotate(18 88 196)" fill="#1c1a22"/>
- <ellipse cx="312" cy="196" rx="50" ry="24" transform="rotate(-18 312 196)" fill="#1c1a22"/>
- <ellipse cx="92" cy="198" rx="30" ry="12" transform="rotate(18 92 198)" fill="#f2a7b8"/>
- <ellipse cx="308" cy="198" rx="30" ry="12" transform="rotate(-18 308 198)" fill="#f2a7b8"/>
- <path d="M146 146 H254 Q302 146 298 196 L284 300 Q280 330 252 336 H148 Q120 330 116 300 L102 196 Q98 146 146 146 Z" fill="#ffffff"/>
- <path d="M206 146 H254 Q302 146 298 196 L292 246 C276 262 244 262 226 244 C210 228 200 200 206 146 Z" fill="#1c1a22"/>
- <path d="M146 146 H182 C186 166 176 182 160 186 C142 190 120 182 104 176 C108 156 124 146 146 146 Z" fill="#1c1a22"/>
- <circle cx="160" cy="226" r="13" fill="#1c1a22"/><circle cx="164" cy="222" r="4" fill="#ffffff"/>
- <circle cx="244" cy="226" r="16" fill="#ffffff"/><circle cx="244" cy="226" r="11" fill="#1c1a22"/><circle cx="248" cy="222" r="4" fill="#ffffff"/>
- <ellipse cx="200" cy="312" rx="80" ry="50" fill="#f2a7b8"/>
- <ellipse cx="172" cy="314" rx="12" ry="16" fill="#d9798f"/><ellipse cx="228" cy="314" rx="12" ry="16" fill="#d9798f"/>
- </g>
- <g transform="translate(0 0)">
- <rect x="336" y="320" width="24" height="84" rx="12" fill="#f2a7b8"/><rect x="366" y="330" width="24" height="88" rx="12" fill="#f2a7b8"/>
- <rect x="396" y="330" width="24" height="88" rx="12" fill="#f2a7b8"/><rect x="426" y="320" width="24" height="84" rx="12" fill="#f2a7b8"/>
- <path d="M318 268 Q318 252 334 252 H452 Q468 252 468 268 Q472 352 393 368 Q314 352 318 268 Z" fill="#f2a7b8"/>
- <rect x="379" y="262" width="28" height="84" rx="8" fill="#e23b3b" stroke="#ffffff" stroke-width="6" paint-order="stroke"/>
- <rect x="351" y="290" width="84" height="28" rx="8" fill="#e23b3b" stroke="#ffffff" stroke-width="6" paint-order="stroke"/>
- <rect x="382" y="265" width="22" height="78" rx="6" fill="#e23b3b"/>
- </g></g><text x="256" y="424" text-anchor="middle" font-family="'DejaVu Sans','Liberation Sans',Arial,Helvetica,sans-serif" font-weight="800" font-size="70" letter-spacing="5" fill="#ffffff">MASTITIS</text></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs><clipPath id="r"><rect width="512" height="512" rx="0"/></clipPath></defs>
+  <g clip-path="url(#r)">
+    <rect width="512" height="512" fill="#6a3fb5"/>
+    <rect y="372" width="512" height="140" fill="#0f7a5c"/>
+    <!-- horns -->
+    <path d="M150 120 q-30 -40 -10 -70 q14 30 46 46z" fill="#f3e6c8"/>
+    <path d="M362 120 q30 -40 10 -70 q-14 30 -46 46z" fill="#f3e6c8"/>
+    <!-- ears -->
+    <ellipse cx="118" cy="168" rx="52" ry="26" transform="rotate(-20 118 168)" fill="#ffffff"/>
+    <ellipse cx="394" cy="168" rx="52" ry="26" transform="rotate(20 394 168)" fill="#ffffff"/>
+    <ellipse cx="122" cy="168" rx="30" ry="13" transform="rotate(-20 122 168)" fill="#f6b7c8"/>
+    <ellipse cx="390" cy="168" rx="30" ry="13" transform="rotate(20 390 168)" fill="#f6b7c8"/>
+    <!-- head -->
+    <rect x="150" y="96" width="212" height="220" rx="96" fill="#ffffff"/>
+    <path d="M166 150 q20 -48 70 -42 q-6 40 -40 62 q-22 10 -30 -20z" fill="#1f1b2b"/>
+    <path d="M330 120 q30 18 30 60 q-34 -2 -44 -30 q-4 -20 14 -30z" fill="#1f1b2b"/>
+    <!-- eyes -->
+    <circle cx="210" cy="198" r="15" fill="#1f1b2b"/><circle cx="215" cy="193" r="5" fill="#fff"/>
+    <circle cx="302" cy="198" r="15" fill="#1f1b2b"/><circle cx="307" cy="193" r="5" fill="#fff"/>
+    <!-- muzzle -->
+    <ellipse cx="256" cy="276" rx="92" ry="58" fill="#f6b7c8"/>
+    <ellipse cx="226" cy="276" rx="12" ry="17" fill="#c06c86"/>
+    <ellipse cx="286" cy="276" rx="12" ry="17" fill="#c06c86"/>
+    <!-- stethoscope -->
+    <path d="M176 300 q-10 60 40 78 q40 12 72 -10" fill="none" stroke="#2b2540" stroke-width="12" stroke-linecap="round"/>
+    <path d="M336 300 q10 50 -24 66" fill="none" stroke="#2b2540" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="300" cy="366" r="22" fill="#cfd6dd" stroke="#2b2540" stroke-width="8"/>
+    <circle cx="300" cy="366" r="9" fill="#8a96a3"/>
+    <text x="256" y="468" text-anchor="middle" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" font-size="88" fill="#ffffff" letter-spacing="4">COW OPD</text>
+  </g>
+</svg>

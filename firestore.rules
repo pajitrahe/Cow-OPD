@@ -29,6 +29,7 @@ service cloud.firestore {
     match /meta/{docId}     { allow read: if isMember(); allow write: if isMember(); }
     // ประวัติการแก้ไข: เพิ่มได้ แต่แก้หรือลบไม่ได้
     match /audit/{docId}    { allow read: if isMember(); allow create: if isMember(); allow update, delete: if false; }
+    // แอปบันทึกการรักษาโคป่วย (โรคอื่น) ใช้คอลเลกชัน tx_cases ซึ่งอยู่ในกฎข้อสุดท้าย: สมาชิกทุกคนอ่าน/เขียนได้
     // ข้อมูลอื่น (เคส ผลเพาะเชื้อที่ลงเอง ความเสี่ยง ถังขยะ บันทึกสรุป): สมาชิกทุกคน
     match /{coll}/{docId} {
       allow read, write: if !(coll in ['members','herd','cultures','scc','meta','audit']) && isMember();
